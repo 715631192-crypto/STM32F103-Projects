@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM32 智能门锁固件 · 源码精讲（40 分钟版）</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f7f9; --ink:#2c2c2a; --muted:#5f5e5a;
+    --line:#d3d1c7; --blue:#185fa5; --teal:#0f6e56; --purple:#534ab7;
+    --amber:#854f0b; --red:#a32d2d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--panel);color:var(--ink);
+       font:400 15px/1.75 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 72px;}
+  h1{font-size:27px;font-weight:600;margin:0 0 6px;}
+  h2{font-size:21px;font-weight:600;margin:46px 0 14px;padding:6px 0 6px 12px;
+     border-left:4px solid var(--blue);background:linear-gradient(90deg,#eef4fb,transparent);}
+  h3{font-size:16.5px;font-weight:600;margin:26px 0 8px;color:var(--blue);}
+  h4{font-size:15px;font-weight:600;margin:18px 0 6px;color:var(--teal);}
+  p{margin:10px 0;}
+  .lead{color:var(--muted);margin:0 0 10px;}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:12px;
+        padding:16px;margin:16px 0;overflow-x:auto;}
+  .card svg{width:100%;height:auto;display:block;}
+  pre{background:#20242b;color:#e6e6e6;border-radius:8px;padding:12px 14px;
+      font-size:13px;line-height:1.6;overflow:auto;margin:10px 0;}
+  code{background:#eef0f3;border-radius:5px;padding:1px 6px;font-size:13px;
+       font-family:"SFMono-Regular",Consolas,monospace;color:#9b2c2c;}
+  pre code{background:none;color:inherit;padding:0;}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:#eef0f3;font-weight:600;}
+  .note{background:#fbf4e6;border:1px solid #f3d9a6;border-radius:10px;
+        padding:12px 14px;color:#633806;font-size:14px;margin:14px 0;}
+  .danger{background:#fcebeb;border:1px solid #f3c0c0;border-radius:10px;
+          padding:12px 14px;color:#791f1f;font-size:14px;margin:14px 0;}
+  .tip{background:#eef4fb;border:1px solid #c2d8f0;border-radius:10px;
+       padding:10px 14px;color:#0c447c;font-size:13.5px;margin:12px 0;}
+  ul,ol{margin:10px 0;padding-left:24px;}
+  li{margin:5px 0;}
+  .kbd{display:inline-block;border:1px solid var(--line);border-bottom-width:2px;
+       border-radius:5px;padding:0 6px;font-family:monospace;background:#fafafa;}
+  .foot{color:var(--muted);font-size:13px;margin-top:56px;text-align:center;}
+  .toc{columns:2;column-gap:28px;font-size:14px;}
+  .toc a{color:var(--blue);text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>STM32 智能门锁固件 · 源码精讲</h1>
+<p class="lead">按"启动 → 任务 → 输入 → 鉴权 → 锁控 → 存储 → 时钟 → 显示 → 驱动 → 安全 → 事件流 → 调试"的工程顺序，带你看懂整套固件。文中所有函数名、行号、协议、寄存器均取自当前工程源码（<code>firmware/</code>）。</p>
+<div class="note"><b>怎么用这份文档讲 40 分钟+</b>：每章末尾的「⏱ 讲解提示」给出建议时长与要点；文末第 13 章给了一张 12 段讲稿节奏表（合计约 46 分钟）。配合 10 张图，按"先讲数据流、再逐行代码、最后落到现象"的节奏即可。</div>
+
+<h3>目录</h3>
+<div class="toc">
+<ol>
+<li><a href="#c0">项目全景与工程约束</a></li>
+<li><a href="#c1">启动链路：main() 的每一行</a></li>
+<li><a href="#c2">FreeRTOS 任务与队列模型</a></li>
+<li><a href="#c3">输入子系统：键盘 / 唤醒键 / 读头</a></li>
+<li><a href="#c4">认证与鉴权（核心）</a></li>
+<li><a href="#c5">锁控状态机</a></li>
+<li><a href="#c6">存储层：W25Q64 分区与掉电安全</a></li>
+<li><a href="#c7">时钟：DS3231 与软时钟回退</a></li>
+<li><a href="#c8">显示与 I2C 总线并发锁</a></li>
+<li><a href="#c9">外设驱动：SPI / 串口 / MQTT</a></li>
+<li><a href="#c10">安全设计要点汇总</a></li>
+<li><a href="#c11">一次开锁的完整事件流</a></li>
+<li><a href="#c12">调试与工程手法</a></li>
+<li><a href="#c13">12 段讲稿节奏表（46 分钟）</a></li>
+</ol>
+</div>
+
+<!-- ============================ 0 ============================ -->
+<h2 id="c0">0. 项目全景与工程约束</h2>
+<p>先立一张"全局地图"。整个固件是<b>四层结构</b>：应用逻辑层（纯 C、可主机测试）→ 板级适配层（把驱动/RTOS 粘起来）→ 驱动层 → RTOS 内核。分层的好处：<b>安全逻辑（鉴权/凭据/状态机）与硬件完全解耦</b>，可以在 PC 上跑单元测试。</p>
+
+<div class="card">
+<svg viewBox="0 0 680 300" role="img" aria-label="四层架构">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5f5e5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="40" y="30" width="600" height="52" rx="10" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="60" y="52" font-weight="500" fill="#042c53">① 应用逻辑层　firmware/app/</text>
+  <text x="60" y="71" fill="#185fa5" font-size="12.5">lock_auth · lock_controller · pin/visitor/periodic_credential · totp · sha1 · event_log · config_store · remote_command</text>
+
+  <rect x="40" y="98" width="600" height="52" rx="10" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="60" y="120" font-weight="500" fill="#26215c">② 板级适配层　firmware/stm32/src/</text>
+  <text x="60" y="139" fill="#534ab7" font-size="12.5">board_port.c（外设聚合 + 输入轮询 + UI 渲染）· smart_lock_app.c（任务/队列/菜单）· main.c</text>
+
+  <rect x="40" y="166" width="600" height="52" rx="10" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="60" y="188" font-weight="500" fill="#04342c">③ 驱动层　firmware/HARDWARE/ + MIDDLEWARE/</text>
+  <text x="60" y="207" fill="#0f6e56" font-size="12.5">mfrc522 · as608 · esp8266 · w25q64 · oled · i2c_soft · ds3231 · servo · key_4x4 · buzzer · rgb_led · MqttKit · cJSON</text>
+
+  <rect x="40" y="234" width="600" height="46" rx="10" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.5"/>
+  <text x="60" y="254" font-weight="500" fill="#2c2c2a">④ RTOS 内核　firmware/FreeRTOS/（V10.5.1，RVDS 移植）</text>
+  <text x="60" y="272" fill="#5f5e5a" font-size="12.5">tasks · queue · list · timers · heap_4（全静态分配，configTOTAL_HEAP_SIZE = 4 KB）</text>
+
+  <line x1="640" y1="82" x2="640" y2="96" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="640" y1="150" x2="640" y2="164" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="640" y1="218" x2="640" y2="232" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="655" y="155" fill="#5f5e5a" font-size="11" transform="rotate(90 660 155)">依赖方向</text>
+</svg>
+</div>
+
+<h3>硬件与工程约束（讲解时先交代，后面处处用到）</h3>
+<table>
+<tr><th>项</th><th>值</th><th>影响</th></tr>
+<tr><td>MCU</td><td>STM32F103C8（Cortex-M3，72 MHz，64 KB Flash / 20 KB RAM）</td><td>资源紧张，一切要省</td></tr>
+<tr><td>编译器</td><td>Keil AC5 <code>V5.06u7</code>，<code>-O2</code>，C89</td><td>不能用 C99 声明后置、变长数组</td></tr>
+<tr><td>宏</td><td><code>USE_STDPERIPH_DRIVER, STM32F10X_MD</code></td><td>标准外设库</td></tr>
+<tr><td>RTOS</td><td>FreeRTOS V10.5.1，<code>configUSE_TIMERS=0</code>，<code>configTOTAL_HEAP_SIZE=4 KB</code></td><td>所有内核对象<b>静态创建</b></td></tr>
+<tr><td>实测体积</td><td><code>Code=53756 RO=8104 RW=408 ZI=18208</code>（ROM≈62 KB / 64 KB，RAM≈18.6 KB / 20 KB）</td><td>Flash 余量极小</td></tr>
+<tr><td>源码编码</td><td>含中文的 <code>.c/.h</code> 必须 <b>UTF-8 带 BOM</b></td><td>否则 AC5 按 CP936 解析报 <code>#8: missing closing quote</code></td></tr>
+</table>
+<div class="tip">⏱ <b>讲解提示（2 分钟）</b>：强调"分层是为了可测试"——应用层不 include 任何 STM32 头文件，所以 <code>firmware/tests/</code> 能在 PC 上跑鉴权/日志/配置的单元测试。这是这个工程最值得学的架构决策。</div>
+
+<!-- ============================ 1 ============================ -->
+<h2 id="c1">1. 启动链路：main() 的每一行</h2>
+<p><code>main.c</code> 只有 34 行，是刻意的极简入口。它只做两件事：把一切准备好（<code>smart_lock_app_start()</code>），然后把 CPU 交给调度器（<code>vTaskStartScheduler()</code>）。</p>
+<pre><code>int main(void)
+{
+    if (!smart_lock_app_start()) {   /* ① 准备硬件/配置/队列/任务 */
+        for (;;) { }                 /* 失败：死循环等看门狗复位 */
+    }
+    vTaskStartScheduler();           /* ② 交出 CPU，永不返回 */
+    for (;;) { }                     /* 仅"堆不足起不来"才会到这儿 */
+}</code></pre>
+<div class="note">时钟（72 MHz）由启动文件调用的 <code>SystemInit()</code>（<code>system_stm32f10x.c</code>）配好，<b>main 里不再碰时钟</b>——避免两份初始化互相打架。这是从参考工程继承的纪律。</div>
+
+<h3>1.1 smart_lock_app_start() 的四组事（smart_lock_app.c:1808）</h3>
+<ol>
+<li><code>board_init()</code> —— 9 类外设全部初始化（见 1.2）。</li>
+<li><code>board_security_load()</code> + <code>security_config_valid()</code> —— 从 W25Q64 读安全配置（A/B 双槽，取 CRC 正确且序号大的），再校验信封。</li>
+<li><code>event_log_init()</code> —— 扫 128 个日志槽，定位"最新一条"，算出下一个可写位置。</li>
+<li>清状态 → <code>lock_controller_init()</code> → <code>set_physical_state()</code>（上电即锁门）→ 建 <b>6 个静态队列</b> → 建 <b>5 个静态任务</b> → <code>queue_ui(...,"System ready",true)</code>。</li>
+</ol>
+
+<h3>1.2 board_init() 的 9 步（board_port.c:610）</h3>
+<div class="card">
+<svg viewBox="0 0 680 560" role="img" aria-label="board_init 9 步">
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#0f6e56" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="96" y="26" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="51" r="13" fill="#0f6e56"/><text x="124" y="51" text-anchor="middle" fill="#fff" font-size="12.5">1</text>
+  <text x="152" y="46" font-weight="500" fill="#04342c">sys_init() + delay_init()</text>
+  <text x="152" y="65" fill="#0f6e56" font-size="12.5">NVIC 分组 / 释放 PA15·PB3·PB4（否则 4×4 键盘不可用）</text>
+
+  <rect x="96" y="86" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="111" r="13" fill="#0f6e56"/><text x="124" y="111" text-anchor="middle" fill="#fff" font-size="12.5">2</text>
+  <text x="152" y="106" font-weight="500" fill="#04342c">三路串口</text>
+  <text x="152" y="125" fill="#0f6e56" font-size="12.5">USART1 ESP8266 / USART2 指纹 / USART3 调试打印</text>
+
+  <rect x="96" y="146" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="171" r="13" fill="#0f6e56"/><text x="124" y="171" text-anchor="middle" fill="#fff" font-size="12.5">3</text>
+  <text x="152" y="166" font-weight="500" fill="#04342c">显示与本地交互</text>
+  <text x="152" y="185" fill="#0f6e56" font-size="12.5">IIC_Init → OLED_Init → OLED_Clear / buzzer / rgb</text>
+
+  <rect x="96" y="206" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="231" r="13" fill="#0f6e56"/><text x="124" y="231" text-anchor="middle" fill="#fff" font-size="12.5">4</text>
+  <text x="152" y="226" font-weight="500" fill="#04342c">W25Q64 存储</text>
+  <text x="152" y="245" fill="#0f6e56" font-size="12.5">Init 失败 → 诊断上报 + return false（配置/日志都靠它）</text>
+
+  <rect x="96" y="266" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="291" r="13" fill="#0f6e56"/><text x="124" y="291" text-anchor="middle" fill="#fff" font-size="12.5">5</text>
+  <text x="152" y="286" font-weight="500" fill="#04342c">RC522 射频读卡</text>
+  <text x="152" y="305" fill="#0f6e56" font-size="12.5">ProbeMiso → Init → Check 不通则再 Init 一次救回</text>
+
+  <rect x="96" y="326" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="351" r="13" fill="#0f6e56"/><text x="124" y="351" text-anchor="middle" fill="#fff" font-size="12.5">6</text>
+  <text x="152" y="346" font-weight="500" fill="#04342c">DS3231 实时时钟</text>
+  <text x="152" y="365" fill="#0f6e56" font-size="12.5">Init + 读 UTC；无 ACK 自动回落软时钟并打印告警</text>
+
+  <rect x="96" y="386" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="411" r="13" fill="#0f6e56"/><text x="124" y="411" text-anchor="middle" fill="#fff" font-size="12.5">7</text>
+  <text x="152" y="406" font-weight="500" fill="#04342c">舵机执行器</text>
+  <text x="152" y="425" fill="#0f6e56" font-size="12.5">servo_init + servo_lock：上电即回到锁闭位（安全优先）</text>
+
+  <rect x="96" y="446" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="471" r="13" fill="#0f6e56"/><text x="124" y="471" text-anchor="middle" fill="#fff" font-size="12.5">8</text>
+  <text x="152" y="466" font-weight="500" fill="#04342c">键盘与唤醒键</text>
+  <text x="152" y="485" fill="#0f6e56" font-size="12.5">keypad / wake 初始化 + 扫描状态结构体</text>
+
+  <rect x="96" y="506" width="470" height="50" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="124" cy="531" r="13" fill="#0f6e56"/><text x="124" y="531" text-anchor="middle" fill="#fff" font-size="12.5">9</text>
+  <text x="152" y="526" font-weight="500" fill="#04342c">云端与看门狗</text>
+  <text x="152" y="545" fill="#0f6e56" font-size="12.5">app_wifi_init() 注册 MQTT 下行 + watchdog_init → [BOOT] ready</text>
+
+  <line x1="331" y1="76" x2="331" y2="84" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="331" y1="136" x2="331" y2="144" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="331" y1="196" x2="331" y2="204" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="331" y1="256" x2="331" y2="264" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="331" y1="316" x2="331" y2="324" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="331" y1="376" x2="331" y2="384" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="331" y1="436" x2="331" y2="444" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="331" y1="496" x2="331" y2="504" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+</svg>
+</div>
+<p><b>顺序里的三个"必须"</b>（讲这两分钟最出彩）：</p>
+<ul>
+<li>第 1 步必须先做 —— PA15/PB3/PB4 复位后默认是 JTAG 功能，不 <code>GPIO_Remap_SWJ_JTAGDisable</code> 释放，键盘的行线就拉不动。</li>
+<li>第 3 步必须先 <code>IIC_Init()</code> 再 <code>OLED_Init()</code> —— OLED 走软件 I2C（PB8/PB9）。<code>OLED_Clear()</code> 也不能省：SSD1306 上电显存是随机的，而界面只写第 0/2/4/6 页，第 3 页从没人写，不清屏就会留一条随机噪点带。</li>
+<li>第 5 步的"双 Init"—— MCU 复位后 RC522 常首次初始化不成功（上电瞬间芯片内部状态机没起来），<code>MFRC522_Check()</code> 不通就再 <code>MFRC522_Init()</code> 一次（内含 PC14 RST 硬复位脉冲）把它救回来。</li>
+</ul>
+<div class="tip">⏱ <b>讲解提示（5 分钟）</b>：从 main 逐行讲到 9 步，重点铺"顺序约束"。先不给结论，问听众"如果先 Init OLED 再 IIC_Init 会怎样"，再揭晓——互动感强。</div>
+
+<!-- ============================ 2 ============================ -->
+<h2 id="c2">2. FreeRTOS 任务与队列模型</h2>
+<p>调度器一起来，5 个任务并发跑。<b>任务之间从不直接调用</b>，一律通过队列通信 —— 这是整个系统能从"一个死循环"演进成"可维护固件"的关键。</p>
+
+<div class="card">
+<svg viewBox="0 0 680 300" role="img" aria-label="任务与队列数据流">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5f5e5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="30" y="30" width="170" height="58" rx="8" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="115" y="52" text-anchor="middle" font-weight="500" fill="#042c53">input_task</text>
+  <text x="115" y="72" text-anchor="middle" fill="#185fa5" font-size="12">prio3 · 10ms 键盘/读头</text>
+
+  <rect x="30" y="150" width="170" height="58" rx="8" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="115" y="172" text-anchor="middle" font-weight="500" fill="#042c53">network_task</text>
+  <text x="115" y="192" text-anchor="middle" fill="#185fa5" font-size="12">prio2 · 50ms AT/MQTT</text>
+
+  <rect x="245" y="88" width="180" height="62" rx="8" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="335" y="111" text-anchor="middle" font-weight="500" fill="#26215c">access_task</text>
+  <text x="335" y="131" text-anchor="middle" fill="#534ab7" font-size="12">prio4 · 100ms 鉴权+锁控+菜单</text>
+
+  <rect x="480" y="30" width="170" height="58" rx="8" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="565" y="52" text-anchor="middle" font-weight="500" fill="#412402">ui_task</text>
+  <text x="565" y="72" text-anchor="middle" fill="#854f0b" font-size="12">prio1 · 阻塞等 ui_queue</text>
+
+  <rect x="480" y="150" width="170" height="58" rx="8" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="565" y="172" text-anchor="middle" font-weight="500" fill="#412402">log_task</text>
+  <text x="565" y="192" text-anchor="middle" fill="#854f0b" font-size="12">prio1 · 写审计日志</text>
+
+  <line x1="200" y1="60" x2="243" y2="105" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="216" y="76" fill="#5f5e5a" font-size="11">input_queue</text>
+  <line x1="200" y1="180" x2="243" y2="133" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="210" y="163" fill="#5f5e5a" font-size="11">remote_queue</text>
+  <line x1="425" y1="110" x2="478" y2="62" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="446" y="80" fill="#5f5e5a" font-size="11">ui_queue</text>
+  <line x1="425" y1="118" x2="478" y2="178" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="450" y="158" fill="#5f5e5a" font-size="11">log_queue</text>
+  <line x1="565" y1="150" x2="565" y2="92" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="600" y="124" fill="#5f5e5a" font-size="11">log_request</text>
+  <text x="335" y="245" text-anchor="middle" fill="#5f5e5a" font-size="12">另有 notify_queue：access → network（上报 OneNET）</text>
+  <text x="335" y="270" text-anchor="middle" fill="#5f5e5a" font-size="12">6 队列全部 xQueueCreateStatic；5 任务全部 xTaskCreateStatic</text>
+</svg>
+</div>
+
+<h3>2.1 任务表（smart_lock_app.c:1863）</h3>
+<table>
+<tr><th>任务</th><th>优先级</th><th>栈(字)</th><th>节拍</th><th>职责</th></tr>
+<tr><td>input_task</td><td>3</td><td>256</td><td>10 ms</td><td>扫键盘/唤醒键/读头 → <code>input_queue</code></td></tr>
+<tr><td>access_task</td><td><b>4（最高）</b></td><td>384</td><td>100 ms</td><td>消费 input/remote → 鉴权决策 → 锁控；管理菜单；每秒 tick（自动落锁/门未关/进 STOP）</td></tr>
+<tr><td>network_task</td><td>2</td><td><b>768</b></td><td>50 ms</td><td>ESP8266 AT/MQTT 收下行、发上行</td></tr>
+<tr><td>log_task</td><td>1</td><td>256</td><td>50 ms</td><td>写 W25Q64 审计日志、响应回读</td></tr>
+<tr><td>ui_task</td><td>1</td><td>160</td><td>阻塞</td><td>等 <code>ui_queue</code> 刷 OLED</td></tr>
+</table>
+<div class="danger"><b>为什么 network 要 768 字？</b>这不是拍脑袋——它是"栈溢出静默死机"事故的产物。<code>esp8266_mqtt_connect()</code> 里光局部变量就有 <code>cmd[192] + token[200] = 392 B</code>，再加上 <code>onenet_calc_token()</code>（base64/HMAC）与 <code>printf</code> 的开销，320 字（1280 B）被用穿。溢出后 FreeRTOS 调 <code>vApplicationStackOverflowHook()</code>（<code>taskDISABLE_INTERRUPTS(); for(;;);</code>）——<b>关中断死循环，什么都不打印</b>。现场特征：串口输出停在 <code>[MQTT] token len=...</code> 中间、<code>xTickCount</code> 冻结、键盘/屏/指纹/刷卡全停，只有断电才好。修复就是把栈加到与参考工程 <code>STK_WIFI=768</code> 对齐。</div>
+<div class="note"><b>为什么全静态分配？</b>工程把 <code>configTOTAL_HEAP_SIZE</code> 设成 4 KB（照抄参考工程 16 KB 会在链接时报 <code>L6406E</code>）。既然堆只有 4 KB，就干脆不用动态分配：队列、任务栈、控制块全是 <code>static</code> 数组，<code>xQueueCreateStatic</code>/<code>xTaskCreateStatic</code> 一次成型。<b>好处</b>：启动几乎不可能因内存失败，也彻底杜绝内存碎片。</div>
+<div class="tip">⏱ <b>讲解提示（5 分钟）</b>：先画这张数据流图，讲"队列解耦 + 优先级"。然后讲 network 栈 768 的事故——这是"用调试手法反推根因"的经典案例，听众最爱。</div>
+
+<!-- ============================ 3 ============================ -->
+<h2 id="c3">3. 输入子系统：键盘 / 唤醒键 / 读头</h2>
+<p><code>input_task</code> 每 10 ms 调一次 <code>board_poll_input()</code>（board_port.c:981）。它把三类输入统一成 <code>board_input_event_t</code> 事件：</p>
+
+<div class="card">
+<svg viewBox="0 0 680 250" role="img" aria-label="输入子系统">
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5f5e5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="30" y="34" width="150" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="105" y="56" text-anchor="middle" font-weight="500" fill="#04342c">4×4 键盘</text>
+  <text x="105" y="74" text-anchor="middle" fill="#0f6e56" font-size="12">行 PA11/12/15/PB3·列 PB4~7</text>
+
+  <rect x="30" y="104" width="150" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="105" y="126" text-anchor="middle" font-weight="500" fill="#04342c">PA8 唤醒键</text>
+  <text x="105" y="144" text-anchor="middle" fill="#0f6e56" font-size="12">EXTI8，ISR 只置标志</text>
+
+  <rect x="30" y="174" width="150" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="105" y="196" text-anchor="middle" font-weight="500" fill="#04342c">读头</text>
+  <text x="105" y="214" text-anchor="middle" fill="#0f6e56" font-size="12">RC522 / AS608</text>
+
+  <rect x="255" y="80" width="180" height="100" rx="10" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="345" y="104" text-anchor="middle" font-weight="500" fill="#042c53">board_poll_input()</text>
+  <text x="345" y="126" text-anchor="middle" fill="#185fa5" font-size="12">键盘扫描 + 25ms 消抖</text>
+  <text x="345" y="144" text-anchor="middle" fill="#185fa5" font-size="12">CARD_POLL_TICKS=10(100ms)</text>
+  <text x="345" y="162" text-anchor="middle" fill="#185fa5" font-size="12">FINGER_POLL_TICKS=40(400ms)</text>
+
+  <rect x="500" y="88" width="150" height="84" rx="10" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="575" y="112" text-anchor="middle" font-weight="500" fill="#26215c">board_input_event_t</text>
+  <text x="575" y="132" text-anchor="middle" fill="#534ab7" font-size="12">type / user_id</text>
+  <text x="575" y="150" text-anchor="middle" fill="#534ab7" font-size="12">digits[32] / count</text>
+
+  <line x1="180" y1="60" x2="253" y2="105" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a4)"/>
+  <line x1="180" y1="130" x2="253" y2="128" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a4)"/>
+  <line x1="180" y1="200" x2="253" y2="155" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a4)"/>
+  <line x1="435" y1="130" x2="498" y2="130" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a4)"/>
+  <text x="345" y="228" text-anchor="middle" fill="#5f5e5a" font-size="12">→ input_queue → access_task 的 handle_board_input()</text>
+</svg>
+</div>
+
+<h3>3.1 键盘：矩阵扫描 + 状态机</h3>
+<p><code>key_4x4.c</code> 做行扫描（逐行拉低、读列），<code>keypad_input.c</code> 做去抖与语义化：</p>
+<ul>
+<li>25 ms 消抖后产出一个字符键；数字/<code>*</code> 进输入缓冲（回显 <code>*</code>），<code>#</code> = 确认提交。</li>
+<li><span class="kbd">B</span> = 退格删位，<span class="kbd">C</span> = 取消/退出，<span class="kbd">A</span>/<span class="kbd">D</span> = 菜单移动/进入（<code>D</code> → <code>BOARD_MENU_REQUEST</code>）。</li>
+<li>无操作超时自动清空输入缓冲。</li>
+</ul>
+<p><b>关键设计</b>：数字键的本地回显由板级层直接写 OLED 第 4 行（<code>ui_render_keypad_entry()</code>），同时发一个 <code>BOARD_KEYPAD_ACTIVITY</code> 事件——这个事件在应用层是<b>空 case</b>，它的唯一作用是刷新 <code>last_activity_at</code>，防止用户输入到一半被"静止 60 s 熄屏"关屏。<b>刻意不 queue_ui</b>，否则会把回显覆盖掉。</p>
+
+<h3>3.2 唤醒键 PA8（EXTI8）</h3>
+<pre><code>/* ISR 里只置一个 volatile 标志，不碰任何 FreeRTOS 对象 */
+void board_wake_irq_notify(void) { s_wake_pending = true; }
+/* 真正的"唤醒"在 input 任务上下文里翻译成事件 */
+if (s_wake_pending) { s_wake_pending = false; event->type = BOARD_TOUCH_WAKE; return true; }</code></pre>
+<p>这是嵌入式里最常见的纪律：<b>ISR 越短越好，且绝不调用可能阻塞的 RTOS API</b>（<code>xQueueSendFromISR</code> 也是能避则避）。</p>
+
+<h3>3.3 管理菜单模式对输入的接管</h3>
+<p>当 <code>s_menu_active = true</code>（<code>board_menu_set_active</code>），<code>board_poll_input</code> 走另一条分支：<b>不喂 keypad_input、不轮询读头</b>，每个按键原样上抛为 <code>BOARD_MENU_KEY</code>。这样菜单流程可以"独占"键盘与读头，不会和登录输入打架。</p>
+<div class="tip">⏱ <b>讲解提示（4 分钟）</b>：强调"<code>BOARD_KEYPAD_ACTIVITY</code> 是空 case 但有意义"这个细节——体现作者对"回显 vs 状态刷新"边界的思考。</div>
+
+<!-- ============================ 4 ============================ -->
+<h2 id="c4">4. 认证与鉴权（核心）</h2>
+<p>这是全工程最该细讲的地方。<code>handle_board_input()</code>（smart_lock_app.c:1353）是鉴权总入口，一个 <code>switch</code> 分发 7 种鉴权事件。</p>
+
+<div class="card">
+<svg viewBox="0 0 680 340" role="img" aria-label="PIN 鉴权决策树">
+  <defs>
+    <marker id="a5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5f5e5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="250" y="24" width="180" height="44" rx="8" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="340" y="46" text-anchor="middle" font-weight="500" fill="#042c53">BOARD_AUTH_PIN</text>
+
+  <rect x="250" y="96" width="180" height="44" rx="8" fill="#fcebeb" stroke="#a32d2d" stroke-width="0.5"/>
+  <text x="340" y="118" text-anchor="middle" fill="#791f1f">keypad_is_locked ?</text>
+  <rect x="470" y="96" width="170" height="44" rx="8" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.5"/>
+  <text x="555" y="118" text-anchor="middle" font-size="12.5" fill="#2c2c2a">deny（锁定期）</text>
+
+  <rect x="250" y="168" width="180" height="44" rx="8" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="340" y="190" text-anchor="middle" font-size="13" fill="#412402">胁迫码？</text>
+  <rect x="470" y="168" width="170" height="44" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="555" y="190" text-anchor="middle" font-size="12.5" fill="#04342c">grant_duress（静默报警）</text>
+
+  <rect x="250" y="240" width="180" height="44" rx="8" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="340" y="262" text-anchor="middle" font-size="13" fill="#26215c">业主码？</text>
+  <rect x="470" y="240" width="170" height="44" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="555" y="262" text-anchor="middle" font-size="12.5" fill="#04342c">→ 双因子判定 → grant</text>
+
+  <rect x="250" y="300" width="180" height="30" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="340" y="320" text-anchor="middle" font-size="12.5" fill="#04342c">访客/周期码？→ grant</text>
+
+  <line x1="340" y1="68" x2="340" y2="94" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a5)"/>
+  <line x1="430" y1="118" x2="468" y2="118" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a5)"/>
+  <line x1="340" y1="140" x2="340" y2="166" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a5)"/>
+  <line x1="430" y1="190" x2="468" y2="190" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a5)"/>
+  <line x1="340" y1="212" x2="340" y2="238" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a5)"/>
+  <line x1="430" y1="262" x2="468" y2="262" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a5)"/>
+  <line x1="340" y1="284" x2="340" y2="298" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a5)"/>
+  <text x="205" y="190" text-anchor="middle" font-size="11" fill="#5f5e5a">否</text>
+  <text x="205" y="262" text-anchor="middle" font-size="11" fill="#5f5e5a">否</text>
+</svg>
+</div>
+
+<h3>4.1 凭据不是明文，而是 HMAC 标签</h3>
+<p>配置里的密码字段是 <code>pin_credential_t</code>（pin_credential.h）：</p>
+<pre><code>typedef struct {
+    uint8_t tag[SHA1_DIGEST_SIZE];   /* HMAC-SHA1(device_secret, pin) */
+    uint8_t pin_length;
+    bool    valid;
+} pin_credential_t;</code></pre>
+<p>也就是说，W25Q64 里<b>从不存明文密码</b>，只存 <code>HMAC(device_secret, PIN)</code> 的标签。校验时对输入重算标签做比较。设备密钥 <code>device_secret[32]</code> 与 TOTP 种子都在同一份安全配置里。</p>
+<p>比较用的是常数时间实现（<code>lock_auth.c:3</code>）：</p>
+<pre><code>bool lock_constant_time_equal(const uint8_t *l, const uint8_t *r, size_t n) {
+    uint8_t difference = 0U;
+    for (size_t i = 0U; i < n; ++i) difference |= (uint8_t)(l[i] ^ r[i]);
+    return difference == 0U;   /* 全部异或完再判断，不提前 return */
+}</code></pre>
+<div class="note"><b>为什么？</b>普通 <code>memcmp</code> 会在第一个不同字节处提前返回，攻击者靠测量比较耗时就能逐字节猜出标签（时序侧信道）。这里把差异累积到最后再判，耗时与"第几位不同"无关。</div>
+
+<h3>4.2 虚拟前后缀：胁迫码的实现</h3>
+<p><code>pin_matches()</code>（lock_auth.c:16）支持 <code>allow_virtual</code>：当输入比存储码长时，滑动窗口在整串里找子串匹配。这样用户被胁迫时，可以输入"胁迫码 + 任意尾巴"（如 <code>654321999</code>）——系统识别为胁迫码，<b>照常开门但静默报警</b>。判决策略里，胁迫码的检查<b>排在业主码之前</b>，所以两者撞号时以胁迫语义优先。</p>
+
+<h3>4.3 TOTP 动态口令（RFC 6238）</h3>
+<pre><code>/* HOTP 动态截断：取末字节低 4 位作偏移，拼 31 位整数再取模 */
+offset = digest[SHA1_DIGEST_SIZE - 1U] & 0x0F;
+binary = ((digest[offset] & 0x7F) << 24) | (digest[offset+1] << 16) |
+         (digest[offset+2] << 8) | digest[offset+3];
+return binary % decimal_modulus(digits);</code></pre>
+<p><code>totp_verify(..., time_step=30, digits=6, allowed_window=1)</code> 会校验 <code>[t-1, t, t+1]</code> 三个时间窗（共 ±30 s 容偏）。<b>前提是时间要准</b>——这就是第 7 章要讲 DS3231 的原因：软件时钟一旦断电跳回编译时刻，偏差 >30 s 动态口令就直接失效。</p>
+
+<h3>4.4 双因子开锁（second_factor_mode）</h3>
+<p>模式有 <code>DISABLED / FINGERPRINT_PIN / RFID_PIN</code> 三种。以"指纹+密码"为例：指纹先到 → 不直接开门，而是记下 <code>pending_first_factor = FINGERPRINT</code>、<code>pending_first_factor_until = now + 超时</code>，屏显 <code>Enter PIN</code>；随后密码到 → 校验"第一因子是不是指纹且没过期" → 才开门。这样<b>单凭一个指纹或一个密码都进不去</b>。</p>
+<pre><code>case BOARD_AUTH_FINGERPRINT:
+    if (second_factor_mode == BOARD_SECOND_FACTOR_FINGERPRINT_PIN) {
+        pending_first_factor = LOCK_METHOD_FINGERPRINT;
+        pending_first_factor_until = now + SECOND_FACTOR_TIMEOUT_SECONDS;
+        queue_ui(controller.state, "Enter PIN", true);
+    } else {
+        grant_access(LOCK_METHOD_FINGERPRINT, event->user_id, now);
+    }</code></pre>
+
+<h3>4.5 访客码 / 周期码</h3>
+<p>两者都是"带时间与次数约束的密码"，模块化在 <code>visitor_credential.c</code> / <code>periodic_credential.c</code>。访客码验证成功后要 <code>board_security_save()</code> 落盘（消耗一次使用次数），<b>落盘成功才开门</b>——注释写得很直白：<code>Never operate the actuator unless state is durable first</code>。访客码刻意<b>绕过双因子</b>，因为访客没有绑定的指纹/卡。</p>
+
+<h3>4.6 失败锁定策略</h3>
+<p>连续失败 <code>maximum_failures</code>（3 次）→ 锁定 <code>lockout_seconds</code>（60 s），期间连菜单入口 <code>D</code> 都被拒（复用同一套 <code>pin_auth_state</code>，避免"连按 D 反复试密码"绕过锁定）。这一逻辑在应用层的 <code>keypad_is_locked</code>/<code>keypad_register_failure</code>，同时复用纯逻辑层 <code>lock_auth_verify_pin()</code>（有主机测试覆盖）。</p>
+<div class="tip">⏱ <b>讲解提示（8 分钟）</b>：本章最重。按"明文 → HMAC 标签 → 常数时间 → 虚拟前后缀 → TOTP → 双因子 → 锁定"的顺序讲，每一步都回答"防的是什么攻击"。这一章讲透，安全功底就立住了。</div>
+
+<!-- ============================ 5 ============================ -->
+<h2 id="c5">5. 锁控状态机</h2>
+<p><code>lock_controller.c</code> 是个 100 行的纯函数状态机，状态只有 4 个，却覆盖了自动落锁、门磁、防撬、锁定全部语义。</p>
+
+<div class="card">
+<svg viewBox="0 0 680 260" role="img" aria-label="锁控状态机">
+  <defs>
+    <marker id="a6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5f5e5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="60" y="60" width="150" height="54" rx="10" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="135" y="84" text-anchor="middle" font-weight="500" fill="#04342c">LOCKED</text>
+  <text x="135" y="102" text-anchor="middle" fill="#0f6e56" font-size="12">锁闭</text>
+
+  <rect x="270" y="60" width="150" height="54" rx="10" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="345" y="84" text-anchor="middle" font-weight="500" fill="#042c53">UNLOCKED</text>
+  <text x="345" y="102" text-anchor="middle" fill="#185fa5" font-size="12">开锁（有 deadline）</text>
+
+  <rect x="480" y="60" width="150" height="54" rx="10" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="555" y="84" text-anchor="middle" font-weight="500" fill="#412402">LOCKOUT</text>
+  <text x="555" y="102" text-anchor="middle" fill="#854f0b" font-size="12">多次失败锁定</text>
+
+  <rect x="270" y="170" width="150" height="54" rx="10" fill="#fcebeb" stroke="#a32d2d" stroke-width="0.5"/>
+  <text x="345" y="194" text-anchor="middle" font-weight="500" fill="#791f1f">ALARM</text>
+  <text x="345" y="212" text-anchor="middle" fill="#a32d2d" font-size="12">防撬/胁迫告警</text>
+
+  <line x1="210" y1="87" x2="268" y2="87" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a6)"/>
+  <text x="239" y="78" text-anchor="middle" font-size="11" fill="#5f5e5a">AUTH_GRANTED</text>
+  <line x1="270" y1="99" x2="212" y2="99" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a6)"/>
+  <text x="239" y="112" text-anchor="middle" font-size="11" fill="#5f5e5a">FORCE_LOCK / DOOR_CLOSED</text>
+  <line x1="420" y1="87" x2="478" y2="87" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a6)"/>
+  <text x="449" y="78" text-anchor="middle" font-size="11" fill="#5f5e5a">锁定</text>
+  <line x1="480" y1="99" x2="422" y2="99" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a6)"/>
+  <text x="451" y="112" text-anchor="middle" font-size="11" fill="#5f5e5a">超时/清除</text>
+  <line x1="345" y1="114" x2="345" y2="168" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a6)"/>
+  <text x="365" y="145" font-size="11" fill="#5f5e5a">TAMPER</text>
+  <line x1="300" y1="170" x2="200" y2="116" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a6)"/>
+  <text x="215" y="150" font-size="11" fill="#5f5e5a">CLEAR_ALARM → LOCKED</text>
+  <text x="345" y="248" text-anchor="middle" fill="#5f5e5a" font-size="12">每秒 access_task 发 LOCK_CONTROL_TICK：UNLOCKED 且到 deadline 且门已关 → 自动落锁</text>
+</svg>
+</div>
+<pre><code>case LOCK_CONTROL_AUTH_GRANTED:
+case LOCK_CONTROL_REMOTE_UNLOCK:
+    controller->state = LOCK_STATE_UNLOCKED;
+    controller->unlock_deadline = now + controller->auto_lock_seconds;   /* 自动落锁 */
+    break;
+case LOCK_CONTROL_TICK:
+    if (state == LOCK_STATE_UNLOCKED && unlock_deadline != 0 &&
+        now >= unlock_deadline && door_closed) { state = LOCK_STATE_LOCKED; }
+    break;</code></pre>
+<p><b>精髓</b>：状态机只算"应该是什么状态"，<b>不碰硬件</b>。真正的动作由 <code>set_physical_state()</code> 落地：</p>
+<pre><code>static void set_physical_state(lock_state_t state) {
+    board_lock_set(state != LOCK_STATE_UNLOCKED);   /* 舵机 */
+    board_alarm_set(state == LOCK_STATE_ALARM);     /* 蜂鸣器 */
+}</code></pre>
+<p>另外注意 <code>TICK</code> 的自动落锁条件里带了 <code>door_closed</code>：门还开着就不自动落锁，避免把门卡住/夹到人。</p>
+<div class="tip">⏱ <b>讲解提示（4 分钟）</b>：把"状态机 vs 硬件动作"分离这点讲清楚——这是可测试性的又一次体现（状态机可以脱机单测）。</div>
+
+<!-- ============================ 6 ============================ -->
+<h2 id="c6">6. 存储层：W25Q64 分区与掉电安全</h2>
+<p>所有"必须活过断电"的东西都在 W25Q64（8 MB SPI Flash）上：配置、卡片表、审计日志。</p>
+
+<div class="card">
+<svg viewBox="0 0 680 270" role="img" aria-label="W25Q64 分区">
+  <rect x="60" y="30" width="240" height="220" rx="10" fill="#eef0f3" stroke="#5f5e5a" stroke-width="0.5"/>
+  <rect x="72" y="42" width="216" height="40" rx="6" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="86" y="60" font-size="13" fill="#26215c">配置槽 A　0x000000</text>
+  <text x="86" y="76" font-size="11.5" fill="#534ab7">4 KiB，CRC32 信封</text>
+  <rect x="72" y="88" width="216" height="40" rx="6" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="86" y="106" font-size="13" fill="#26215c">配置槽 B　0x001000</text>
+  <text x="86" y="122" font-size="11.5" fill="#534ab7">4 KiB，A/B 交替写</text>
+  <rect x="72" y="134" width="216" height="40" rx="6" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="86" y="152" font-size="13" fill="#04342c">卡片表　0x002000</text>
+  <text x="86" y="168" font-size="11.5" fill="#0f6e56">≤ 32 张，uid[4]+user+role</text>
+  <rect x="72" y="180" width="216" height="58" rx="6" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="86" y="200" font-size="13" fill="#412402">审计日志　尾部 128 扇区</text>
+  <text x="86" y="218" font-size="11.5" fill="#854f0b">环形覆盖，每条带序号+CRC</text>
+  <text x="86" y="232" font-size="11.5" fill="#854f0b">event_type 按 uint8_t 持久化</text>
+
+  <rect x="330" y="60" width="300" height="150" rx="10" fill="#f6f7f9" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="348" y="82" font-weight="500" fill="#042c53">配置信封格式（小端）</text>
+  <text x="348" y="104" font-size="12.5" fill="#185fa5">0 : magic 'S''L''C''1' = 0x31434C53</text>
+  <text x="348" y="124" font-size="12.5" fill="#185fa5">4 : version u16</text>
+  <text x="348" y="144" font-size="12.5" fill="#185fa5">6 : payload_length u16</text>
+  <text x="348" y="164" font-size="12.5" fill="#185fa5">8 : sequence u32</text>
+  <text x="348" y="184" font-size="12.5" fill="#185fa5">12: payload[...]</text>
+  <text x="348" y="204" font-size="12.5" fill="#a32d2d">末尾 4B: crc32（覆盖 magic..payload）</text>
+</svg>
+</div>
+
+<h3>6.1 为什么是"版本 + 序号 + CRC"的信封</h3>
+<ul>
+<li><b>读</b>：两个槽都解析，取"CRC 正确且序号较大"的那个。</li>
+<li><b>写</b>：永远写"当前非活动"的槽（先擦后写），序号 = 活动序号 + 1。</li>
+</ul>
+<p>这样<b>在擦/写过程中断电，旧槽仍然完好</b>，配置不会丢——这就是"掉电安全"。而 <code>payload 逐字段编码、不直接 memcpy 结构体</code>，是为了避开编译器填充字节带来的跨平台/跨编译器差异。</p>
+<div class="danger"><b>一个实战坑</b>：<code>event_type</code> 是按 <code>uint8_t</code> 持久化写进日志的，所以<b>新的事件枚举只能追加在末尾</b>。若在中间插一个值，历史日志的含义会整体错位。</div>
+
+<h3>6.2 审计日志环形缓冲（event_log.c）</h3>
+<p>日志有 128 个固定槽。<code>event_log_init()</code> 开机扫描所有槽，找 <code>sequence</code> 最新的那条，把它后面一槽作为下一个写入点。<code>event_log_append()</code> 擦一槽、写一条（先算 CRC32）。<code>event_log_read_recent(offset)</code> 从最新往回数第 <code>offset</code> 条——这就是菜单"开锁记录"翻页的数据源。</p>
+<p>每条记录的完整性靠 <code>event_log_record_valid()</code>：<code>magic</code> 对不对 + CRC32 对不对。<code>sequence_is_newer()</code> 用 <code>(int32_t)(a-b) > 0</code> 处理序号回绕——这是嵌入式里判断"环形序号谁更新"的标准写法。</p>
+<div class="tip">⏱ <b>讲解提示（4 分钟）</b>：重点讲 A/B 槽的"先擦非活动槽"策略，配一个"擦到一半拔电"的思维实验。CRC32 和序号回绕是加分细节。</div>
+
+<!-- ============================ 7 ============================ -->
+<h2 id="c7">7. 时钟：DS3231 与软时钟回退</h2>
+<p>时间是这个系统的"安全基石"：TOTP、访客码有效期、云平台 token 的 <code>et</code>、锁定超时全都依赖它。所以时钟必须是<b>真硬件 + 可回退</b>的。</p>
+
+<div class="card">
+<svg viewBox="0 0 680 210" role="img" aria-label="时钟链路">
+  <defs>
+    <marker id="a7" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5f5e5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect x="40" y="40" width="170" height="60" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="125" y="63" text-anchor="middle" font-weight="500" fill="#04342c">DS3231（I2C 0xD0）</text>
+  <text x="125" y="83" text-anchor="middle" fill="#0f6e56" font-size="12">PB8/PB9，存 UTC</text>
+
+  <rect x="255" y="40" width="170" height="60" rx="8" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.5"/>
+  <text x="340" y="63" text-anchor="middle" font-weight="500" fill="#2c2c2a">软时钟（回退）</text>
+  <text x="340" y="83" text-anchor="middle" fill="#5f5e5a" font-size="12">__DATE__/__TIME__ + millis</text>
+
+  <rect x="470" y="40" width="170" height="60" rx="8" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="555" y="63" text-anchor="middle" font-weight="500" fill="#042c53">board_unix_time()</text>
+  <text x="555" y="83" text-anchor="middle" fill="#185fa5" font-size="12">统一出口，返回 UTC</text>
+
+  <line x1="210" y1="70" x2="253" y2="70" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a7)"/>
+  <line x1="425" y1="70" x2="468" y2="70" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a7)"/>
+  <text x="340" y="140" text-anchor="middle" fill="#5f5e5a" font-size="12.5">DS3231_Init 探测失败（无 ACK）→ 自动切软时钟并打印 [RTC] soft clock</text>
+  <text x="340" y="164" text-anchor="middle" fill="#5f5e5a" font-size="12.5">显示/输入用北京时间：DS3231_UnixToLocalTime()（+8），芯片里始终是 UTC</text>
+  <text x="340" y="188" text-anchor="middle" fill="#a32d2d" font-size="12.5">⚠ 软时钟断电跳回编译时刻 → 偏差 &gt;30s 动态口令失效</text>
+</svg>
+</div>
+<pre><code>uint64_t board_unix_time(void) {
+#if DS3231_USE_SOFT
+    return (uint64_t)DS3231_SoftNowUnix();
+#else
+    DS3231_Time now; DS3231_GetTime(&now); return (uint64_t)DS3231_GetUnix(&now);
+#endif
+}</code></pre>
+<p>当前工程是 <code>DS3231_USE_SOFT = 0</code>（真硬件）。设计上刻意做了<b>双编译分支 + 运行期回落</b>：硬件段拆成 <code>hw_probe/hw_read/hw_write</code> + <code>s_rtc_hw_ok</code>，软时钟段<b>总是编译</b>作为兜底；芯片不回 ACK 就自动回落，系统不会因此死机。</p>
+<p><b>时间语义（务必记牢）</b>：芯片里存 <b>UTC</b>（TOTP / token 的 <code>et</code> / 锁定时效按 UTC 算）；OLED 待机时钟、开锁记录、菜单"改时间"用<b>北京时间</b>（<code>DS3231_LOCAL_TZ_HOURS=8</code>）。开机日志 <code>[RTC] DS3231 online &lt;UTC&gt;</code> 可以一眼确认模块是否在线。</p>
+<div class="note"><b>断电还准吗？</b>固件每次只<b>读</b>芯片、绝不回写编译时间（已用"连续两次复位、时间戳自然推进 10 s"验证）。真正的断电保持靠 DS3231 的 <b>VBAT 纽扣电池</b>：电池在位 → 断电继续走时；电池没电 → 冻在断电刻。</div>
+<div class="tip">⏱ <b>讲解提示（3 分钟）</b>：强调"UTC 存储 + 本地显示"的分工，以及"软时钟只是兜底、不是正解"。可以把"为什么动态口令会失效"作为悬念抛出来。</div>
+
+<!-- ============================ 8 ============================ -->
+<h2 id="c8">8. 显示与 I2C 总线并发锁（一个经典 Bug）</h2>
+<p>OLED 是 SSD1306（128×64，地址 0x78），走<b>软件 I2C</b>（PB8=SCL / PB9=SDA）。中文字库在 <code>oledfont_cn.h</code>，由 <code>tools/gen_oled_font.py</code> 维护（<code>--check</code> 返回 1 表示缺字）。渲染时每行用 <code>ui_pad_line()</code> 补满 128 px，防止短行右侧留残像；<code>OLED_Clear()</code> 必调（第 3 页没人写）。</p>
+
+<h3>8.1 花屏根因：同一总线、多任务、无共同锁</h3>
+<div class="danger"><b>现象</b>：待机页四行文字内容正确，但笔画错乱。<b>根因</b>：OLED(0x78) 与 DS3231(0xD0) <b>共用 PB8/PB9 一条软件 I2C</b>，却由不同优先级任务访问：
+<table style="margin-top:8px">
+<tr><th>任务</th><th>优先级</th><th>I2C 动作</th></tr>
+<tr><td>access_task</td><td>4</td><td>每轮 <code>board_unix_time()</code> 读 DS3231</td></tr>
+<tr><td>input_task</td><td>3</td><td>键盘回显写 OLED</td></tr>
+<tr><td>network_task</td><td>2</td><td>拼 token 的 <code>et</code> 读 DS3231</td></tr>
+<tr><td>ui_task</td><td>1</td><td>刷整屏 OLED</td></tr>
+</table>
+高优先级任务在低优先级任务"一次 I2C 事务（bit-bang）传到一半"时抢断它 → 两笔事务的 START/数据/STOP 交织 → 从机把半个字节当数据收下 → 随机花屏。<code>oled.c</code> 里已有 <code>s_oled_mtx</code>，但它只挡"OLED 对 OLED"，<b>挡不住 DS3231</b>。</div>
+
+<h3>8.2 修复：把锁下沉到"总线事务层"</h3>
+<pre><code>/* i2c_soft.c：一次事务(START..STOP)不可被抢占 */
+static SemaphoreHandle_t s_i2c_mtx;   /* IIC_Init() 里创建为递归互斥量 */
+static void i2c_lock(void) {
+    if (s_i2c_mtx && xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
+        xSemaphoreTakeRecursive(s_i2c_mtx, portMAX_DELAY);
+}
+/* IIC_WriteBytesRaw / IIC_ReadRegs / IIC_WriteReg 入口 i2c_lock()、出口 i2c_unlock() */</code></pre>
+<p>用<b>递归锁</b>（因为 <code>oled.c</code> 的 <code>s_oled_mtx</code> 是递归的，会嵌套进入；锁序恒为 <code>s_oled_mtx → s_i2c_mtx</code>，无环不死锁）。FreeRTOS 互斥量有优先级继承，不会优先级反转。</p>
+<div class="note"><b>可复用的经验（值得写在白板上）</b>：<b>同一 I2C/SPI 总线上的多个器件，若被不同任务访问，锁必须加在"总线/事务"层，不能只加在某个器件驱动层</b>。否则任务抢占 = 事务交织 = 通信错乱。这个 bug 之所以以前不犯，是因为 DS3231 启用前时钟是软时钟、根本不碰总线。</div>
+<div class="tip">⏱ <b>讲解提示（4 分钟）</b>：这是最"有故事"的一章。讲"为什么以前不犯、为什么后犯"，再讲"锁加在哪一层"的一般性结论。</div>
+
+<!-- ============================ 9 ============================ -->
+<h2 id="c9">9. 外设驱动：SPI / 串口 / MQTT</h2>
+<div class="card">
+<svg viewBox="0 0 680 250" role="img" aria-label="外设总线拓扑">
+  <rect x="270" y="95" width="140" height="56" rx="10" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="340" y="118" text-anchor="middle" font-weight="500" fill="#26215c">STM32F103</text>
+  <text x="340" y="138" text-anchor="middle" fill="#534ab7" font-size="12">72 MHz</text>
+
+  <rect x="30" y="24" width="170" height="48" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="115" y="44" text-anchor="middle" font-size="12.5" fill="#04342c">USART1 → ESP8266</text>
+  <text x="115" y="62" text-anchor="middle" font-size="11.5" fill="#0f6e56">PA9/PA10 · AT + MQTT</text>
+
+  <rect x="30" y="100" width="170" height="48" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="115" y="120" text-anchor="middle" font-size="12.5" fill="#04342c">USART2 → AS608 指纹</text>
+  <text x="115" y="138" text-anchor="middle" font-size="11.5" fill="#0f6e56">PA2/PA3 · 页号=成员号</text>
+
+  <rect x="30" y="176" width="170" height="48" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="115" y="196" text-anchor="middle" font-size="12.5" fill="#04342c">USART3 → 调试</text>
+  <text x="115" y="214" text-anchor="middle" font-size="11.5" fill="#0f6e56">PB10/PB11 · printf</text>
+
+  <rect x="480" y="24" width="170" height="48" rx="8" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="565" y="44" text-anchor="middle" font-size="12.5" fill="#412402">SPI1 → RC522 读卡</text>
+  <text x="565" y="62" text-anchor="middle" font-size="11.5" fill="#854f0b">PA4~PA7 · RST=PC14</text>
+
+  <rect x="480" y="100" width="170" height="48" rx="8" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="565" y="120" text-anchor="middle" font-size="12.5" fill="#412402">SPI2 → W25Q64</text>
+  <text x="565" y="138" text-anchor="middle" font-size="11.5" fill="#854f0b">PB12~PB15 · 8 MB</text>
+
+  <rect x="480" y="176" width="170" height="48" rx="8" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="565" y="196" text-anchor="middle" font-size="12.5" fill="#412402">软 I2C → OLED+DS3231</text>
+  <text x="565" y="214" text-anchor="middle" font-size="11.5" fill="#854f0b">PB8/PB9 · 共用总线</text>
+
+  <line x1="200" y1="48" x2="268" y2="105" stroke="#5f5e5a" stroke-width="1.2"/>
+  <line x1="200" y1="124" x2="268" y2="124" stroke="#5f5e5a" stroke-width="1.2"/>
+  <line x1="200" y1="200" x2="268" y2="145" stroke="#5f5e5a" stroke-width="1.2"/>
+  <line x1="410" y1="105" x2="478" y2="48" stroke="#5f5e5a" stroke-width="1.2"/>
+  <line x1="410" y1="124" x2="478" y2="124" stroke="#5f5e5a" stroke-width="1.2"/>
+  <line x1="410" y1="145" x2="478" y2="200" stroke="#5f5e5a" stroke-width="1.2"/>
+</svg>
+</div>
+
+<h3>9.1 RC522 读卡（SPI1）</h3>
+<ul>
+<li>SPI 模式 0、4.5 MHz（<code>SPI_BaudRatePrescaler_16</code>，保守值）。驱动把 <code>RFCfgReg=0x70</code>（接收增益拉满 48 dB）、<code>TReloadRegL=10</code>（无卡等待 ≈8 ms）。</li>
+<li>读到 UID 后主动 <code>MFRC522_Halt()</code> 让卡回 IDLE —— 否则卡停在 ACTIVE 态不再应答 REQA，表现为"卡压在读头上只能读一次"。</li>
+<li><b>两级自愈</b>（本次刚加固）：连续 50 轮（≈5 s）无卡时，① 用 <code>MFRC522_Check()</code> 回读 Init 写过的 <code>TModeReg=0x8D / TPrescalerReg=0x3E</code> 判配置是否丢，丢了立即整片重初始化；② 每 6 次自愈（≈30 s）无条件整片重初始化，兜底"射频/命令状态机卡死"。<br><b>教训</b>：<code>VersionReg(0x37)</code> 是固定硅片 ID（本板恒 0x92），<b>芯片丢了配置也照样读得回</b>，永远不能拿它当健康判据。</li>
+</ul>
+
+<h3>9.2 AS608 指纹（USART2）</h3>
+<p>页号即成员编号：1~48 为成员（48 = 管理员），49 为胁迫指纹。<code>AS608_Identify()</code> 一键识别返回页号与置信分；<code>AS608_DeleteChar()</code> 删模板。<b>指纹模板存在模块内部</b>，所以擦 W25Q64 不会清指纹。</p>
+
+<h3>9.3 ESP8266 + MQTT（USART1）</h3>
+<p>走 AT 指令驱动（<code>esp8266.c</code>）：<code>AT</code> → <code>AT+CWMODE=1</code> → <code>AT+CWDHCP</code> → <code>AT+CWJAP</code> 连 Wi-Fi → <code>AT+CIPSTART</code> 连 MQTT → 之后用 <code>MqttKit</code> 收发。云平台是 OneNET（<code>mqtts.heclouds.com:1883</code>），token 由 <code>onenet_token.c</code>（HMAC-SHA1 + base64）现算。<code>network_task</code> 收下行命令塞 <code>remote_queue</code>，并把 <code>notify_queue</code> 里的上报发出去。</p>
+<div class="note"><b>一个已知的坑</b>：AT 命令的"回显"会被误当成应答。例如 <code>AT+CWJAP?</code> 的期望串若写成 <code>"+CWJAP"</code>，会被命令自身回显命中 → 永远判"已连接"、从不真正 <code>AT+CWJAP</code>。改成 <code>"+CWJAP:"</code>（带冒号）才正确。</div>
+<div class="tip">⏱ <b>讲解提示（5 分钟）</b>：三路串口 + 两路 SPI + 一路 I2C 的总线图先讲，再挑 RC522 的"Halt + 两级自愈"和 ESP8266 的"回显陷阱"两个点展开。</div>
+
+<!-- ============================ 10 ============================ -->
+<h2 id="c10">10. 安全设计要点汇总</h2>
+<table>
+<tr><th>机制</th><th>实现位置</th><th>防的是什么</th></tr>
+<tr><td>凭据只存 HMAC 标签</td><td><code>pin_credential_t.tag</code></td><td>Flash 被读出也拿不到明文密码</td></tr>
+<tr><td>常数时间比较</td><td><code>lock_constant_time_equal()</code></td><td>时序侧信道逐字节猜标签</td></tr>
+<tr><td>虚拟前后缀（滑动匹配）</td><td><code>pin_matches()</code></td><td>胁迫码：胁迫下开门 + 静默报警</td></tr>
+<tr><td>TOTP（RFC 6238）</td><td><code>totp.c</code></td><td>一次性动态口令</td></tr>
+<tr><td>双因子开锁</td><td><code>pending_first_factor</code></td><td>单凭一因子被冒用</td></tr>
+<tr><td>失败锁定（3 次 / 60 s）</td><td><code>keypad_register_failure()</code></td><td>暴力试密码（含菜单入口）</td></tr>
+<tr><td>远程命令重放防护</td><td><code>last_remote_request_id</code></td><td>重放旧的远程开锁指令</td></tr>
+<tr><td>掉电安全配置信封</td><td><code>config_store.c</code> A/B 槽</td><td>写一半掉电导致配置损坏</td></tr>
+<tr><td>日志完整性</td><td><code>event_log_record_valid()</code></td><td>日志被篡改/写坏</td></tr>
+<tr><td>舵机上电即锁</td><td><code>board_init</code> 第 7 步</td><td>掉电重启期间门处于开态</td></tr>
+</table>
+<div class="tip">⏱ <b>讲解提示（3 分钟）</b>：这张表是"答辩级"材料——逐行讲"威胁 → 对策"。</div>
+
+<!-- ============================ 11 ============================ -->
+<h2 id="c11">11. 一次开锁的完整事件流</h2>
+<p>把前面所有模块串起来：以"刷指纹开锁"为例，数据在任务/队列/驱动之间的完整旅程。</p>
+<div class="card">
+<svg viewBox="0 0 680 320" role="img" aria-label="开锁时序">
+  <defs>
+    <marker id="a8" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#185fa5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <line x1="80" y1="40" x2="80" y2="300" stroke="#d3d1c7" stroke-width="1"/>
+  <line x1="230" y1="40" x2="230" y2="300" stroke="#d3d1c7" stroke-width="1"/>
+  <line x1="380" y1="40" x2="380" y2="300" stroke="#d3d1c7" stroke-width="1"/>
+  <line x1="530" y1="40" x2="530" y2="300" stroke="#d3d1c7" stroke-width="1"/>
+  <line x1="650" y1="40" x2="650" y2="300" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="80" y="30" text-anchor="middle" font-size="12" fill="#04342c">AS608/input</text>
+  <text x="230" y="30" text-anchor="middle" font-size="12" fill="#26215c">access_task</text>
+  <text x="380" y="30" text-anchor="middle" font-size="12" fill="#042c53">lock_controller</text>
+  <text x="530" y="30" text-anchor="middle" font-size="12" fill="#412402">board_port</text>
+  <text x="650" y="30" text-anchor="middle" font-size="12" fill="#854f0b">log/network</text>
+
+  <line x1="80" y1="66" x2="228" y2="66" stroke="#185fa5" stroke-width="1.4" marker-end="url(#a8)"/>
+  <text x="154" y="60" text-anchor="middle" font-size="11" fill="#5f5e5a">① 匹配成功 → input_queue</text>
+  <line x1="230" y1="100" x2="530" y2="100" stroke="#185fa5" stroke-width="1.4" marker-end="url(#a8)"/>
+  <text x="380" y="94" text-anchor="middle" font-size="11" fill="#5f5e5a">② board_auth_feedback(true) 蜂鸣/灯</text>
+  <line x1="230" y1="134" x2="378" y2="134" stroke="#185fa5" stroke-width="1.4" marker-end="url(#a8)"/>
+  <text x="304" y="128" text-anchor="middle" font-size="11" fill="#5f5e5a">③ AUTH_GRANTED</text>
+  <line x1="380" y1="168" x2="232" y2="168" stroke="#185fa5" stroke-width="1.4" marker-end="url(#a8)"/>
+  <text x="306" y="162" text-anchor="middle" font-size="11" fill="#5f5e5a">④ 返回 UNLOCKED</text>
+  <line x1="230" y1="202" x2="528" y2="202" stroke="#185fa5" stroke-width="1.4" marker-end="url(#a8)"/>
+  <text x="379" y="196" text-anchor="middle" font-size="11" fill="#5f5e5a">⑤ set_physical_state → 舵机开 / 舵机锁</text>
+  <line x1="230" y1="236" x2="528" y2="236" stroke="#185fa5" stroke-width="1.4" marker-end="url(#a8)"/>
+  <text x="379" y="230" text-anchor="middle" font-size="11" fill="#5f5e5a">⑥ queue_ui("Access granted") → 屏显</text>
+  <line x1="230" y1="270" x2="648" y2="270" stroke="#185fa5" stroke-width="1.4" marker-end="url(#a8)"/>
+  <text x="439" y="264" text-anchor="middle" font-size="11" fill="#5f5e5a">⑦ queue_audit → log_queue(W25Q64) + notify_queue(MQTT 上报)</text>
+</svg>
+</div>
+<ol>
+<li><code>input_task</code> 400 ms 轮到指纹 → <code>AS608_Identify()</code> 匹配成功 → 发 <code>BOARD_AUTH_FINGERPRINT</code> 进 <code>input_queue</code>。</li>
+<li><code>access_task</code> 收到 → <code>handle_board_input()</code> → 若双因子模式则只记 pending，否则 <code>grant_access()</code>。</li>
+<li><code>grant_access()</code>：<code>board_auth_feedback(true)</code>（蜂鸣+绿灯）→ <code>lock_controller_handle(AUTH_GRANTED)</code>。</li>
+<li>状态机算出 <code>UNLOCKED</code> 并设 <code>unlock_deadline = now + auto_lock_seconds</code>。</li>
+<li><code>set_physical_state()</code> → 舵机转动开锁、告警灯灭。</li>
+<li><code>queue_ui("Access granted")</code> → <code>ui_task</code> 刷 OLED。</li>
+<li><code>queue_audit()</code>：写 <code>log_queue</code>（<code>log_task</code> 落盘 W25Q64）+ <code>notify_queue</code>（<code>network_task</code> 上报 OneNET）。</li>
+</ol>
+<p>之后每秒 <code>access_task</code> 发 <code>LOCK_CONTROL_TICK</code>，到点自动落锁。</p>
+<div class="tip">⏱ <b>讲解提示（4 分钟）</b>：这张时序图是全篇的收束。讲完它，听众应该能自己复述"一个按键从按下到落地"的完整链路。</div>
+
+<!-- ============================ 12 ============================ -->
+<h2 id="c12">12. 调试与工程手法</h2>
+<ul>
+<li><b>无头构建</b>：Keil UV4 是 GUI 子系统程序，必须用 GUI 子 shell 调 <code>Start-Process @('-r',proj,'-j0','-o',log) -Wait -PassThru</code>，读 <code>ExitCode</code>。<b>判断有没有真重编只能看日志</b>里有没有 <code>compiling *.c...</code> + <code>Program Size:</code>（hex 的 MD5 无意义，因为 <code>ds3231.c</code> 用 <code>__DATE__/__TIME__</code>）。</li>
+<li><b>ST-Link 热插拔读实时寄存器</b>：<code>STM32_Programmer_CLI.exe -c port=SWD mode=hotplug -r32 &lt;addr&gt; &lt;len&gt;</code>。<code>mode=hotplug</code> 必加（不复位不打断，读到真实运行值；<code>len</code> 是字节数）。这是验证"外设到底配没配对/脚到底动不动"的杀手锏。</li>
+<li><b>栈溢出定位</b>：map 查 <code>*_task_stack</code> 地址 → hotplug 读栈底 16 字节。FreeRTOS 用 <code>0xA5A5A5A5</code> 填充，被改写 = 该任务溢出（内容常是返回地址，可反查函数名）。</li>
+<li><b>看门狗</b>：发布版开 <code>SMART_LOCK_ENABLE_IWDG</code>，<code>access_task</code> 每秒 <code>board_watchdog_refresh()</code>；启动失败时 main 里 <code>for(;;)</code> 等它复位。</li>
+<li><b>编码约定</b>：含中文的 <code>.c/.h</code> 必须 UTF-8 <b>带 BOM</b>，否则 AC5 按 CP936 解析报错；字库缺字用 <code>gen_oled_font.py --check</code> 查。</li>
+</ul>
+<div class="tip">⏱ <b>讲解提示（3 分钟）</b>：这一章是"工程素养"展示。重点讲"不能只看退出码、要看日志"和"hotplug 读寄存器"这两招。</div>
+
+<!-- ============================ 13 ============================ -->
+<h2 id="c13">13. 12 段讲稿节奏表（合计约 46 分钟）</h2>
+<table>
+<tr><th>段</th><th>内容</th><th>配图</th><th>时长</th></tr>
+<tr><td>1</td><td>开场 + 项目全景/约束/分层</td><td>图0 四层架构</td><td>3 min</td></tr>
+<tr><td>2</td><td>main() 与 board_init 9 步</td><td>图1 启动链</td><td>5 min</td></tr>
+<tr><td>3</td><td>FreeRTOS 任务/队列 + 768 栈事故</td><td>图2 任务数据流</td><td>6 min</td></tr>
+<tr><td>4</td><td>输入子系统（键盘/唤醒/读头）</td><td>图3 输入链</td><td>4 min</td></tr>
+<tr><td>5</td><td>鉴权核心：HMAC/常数时间/胁迫/TOTP/双因子</td><td>图4 决策树</td><td>8 min</td></tr>
+<tr><td>6</td><td>锁控状态机</td><td>图5 状态机</td><td>4 min</td></tr>
+<tr><td>7</td><td>存储层：A/B 槽与审计日志</td><td>图6 W25Q64 分区</td><td>4 min</td></tr>
+<tr><td>8</td><td>时钟：DS3231 与软时钟</td><td>图7 时钟链</td><td>3 min</td></tr>
+<tr><td>9</td><td>显示 + I2C 总线并发锁</td><td>—</td><td>4 min</td></tr>
+<tr><td>10</td><td>外设驱动（RC522/AS608/ESP8266）</td><td>图8 总线拓扑</td><td>4 min</td></tr>
+<tr><td>11</td><td>安全要点 + 开锁时序</td><td>图9 时序</td><td>4 min</td></tr>
+<tr><td>12</td><td>调试手法 + 总结答疑</td><td>—</td><td>3 min</td></tr>
+</table>
+<p>若时间宽裕，可在第 5 段后加一段"现场演示"：键盘开锁 + 指纹开锁 + 刷卡开锁，各打一次串口日志，对应到时序图的 7 步。</p>
+
+<div class="foot">本文档由 WorkBuddy 依据当前固件源码生成 · 覆盖 <code>firmware/app</code> / <code>firmware/stm32</code> / <code>firmware/HARDWARE</code> / <code>FreeRTOS</code> · 配合 10 张图解使用</div>
+
+</div>
+</body>
+</html>

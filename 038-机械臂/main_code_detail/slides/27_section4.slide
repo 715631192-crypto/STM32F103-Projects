@@ -1,0 +1,14 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 80px', overflow: 'hidden' }}>
+    <Box style={{ position: 'absolute', right: 60, top: 80, fontSize: 280, fontWeight: 'bold', color: 'rgba(59,130,246,0.12)', lineHeight: 1 }}>04</Box>
+    <Text style={{ fontSize: 16, color: '#06B6D4', letterSpacing: 6, fontWeight: 'bold', position: 'relative' }}>CHAPTER 04</Text>
+    <Text style={{ fontSize: 72, color: '#E2E8F0', fontWeight: 'bold', marginTop: 16, position: 'relative' }}>
+      动作组：保存·回放·执行
+    </Text>
+    <Box style={{ width: 120, height: 4, background: 'linear-gradient(135deg,#3B82F6,#06B6D4)', marginTop: 24, position: 'relative' }} />
+    <Text style={{ fontSize: 22, color: '#94A3B8', marginTop: 26, lineHeight: 1.6, position: 'relative' }}>
+      把一组舵机指令存进 W25Q64，之后用一条命令反复播放——<Box /><br />
+      save_action 负责存，loop_action / do_group_once 负责回放执行。
+    </Text>
+  </Box>
+</Slide>

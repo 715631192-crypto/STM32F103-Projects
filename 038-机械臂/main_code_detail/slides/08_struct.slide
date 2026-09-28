@@ -1,0 +1,52 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 1 章 · 系统全景</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>舵机运动结构体：平滑转动的核心</Text>
+    </Box>
+    {/* B 内容区：左代码 + 右原理 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 560 }}>
+        <CodeBlock
+          code={`/* h_servo.h —— 每个舵机的运动结构体 */
+typedef struct {
+    uint16_t aim;   // 执行目标(us)
+    uint16_t time;  // 执行时间(ms)
+    float    cur;   // 当前值(us)
+    float    inc;   // 每20ms步进增量
+} servo_t;
+
+servo_t duoji_doing[DJ_NUM];  // 全局舵机数组`}
+          language='c'
+          width={560}
+          fontSize={16}
+        />
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 19, color: '#E2E8F0', lineHeight: 1.6 }}>
+          TIM2 每 2.5ms 照顾一个舵机、每 20ms 把它「当前脉冲宽」<span style={{ color: '#06B6D4' }}>cur</span> 写进 ARR。要转动舵机，不是直接改 cur，而是改 <span style={{ color: '#FBBF24' }}>aim</span> 与 <span style={{ color: '#FBBF24' }}>inc</span>。
+        </Text>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.6 }}>
+            <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>inc</span> = (aim − cur) / (time / 20)<Box /><br />
+            即「每 20ms 该挪多少」。TIM2 每次中断通过 <span style={{ color: '#06B6D4' }}>servo_inc_offset()</span> 把 cur 朝 aim 推一点点 → 肉眼可见的平滑扫动，而非瞬跳。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.6 }}>
+            <span style={{ color: '#06B6D4', fontWeight: 'bold' }}>aim=cur</span> 即「停在当下」：停止命令（DST / PDST）就是令 inc=0 且 aim=cur。
+          </Text>
+        </Box>
+        <Text style={{ fontSize: 15, color: '#64748B', lineHeight: 1.6 }}>
+          DJ_NUM=8 仅决定 TIM2 分时槽数（8×2.5ms=20ms）；其中 6 路有物理引脚，2 路留空。
+        </Text>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>08 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

@@ -1,0 +1,48 @@
+﻿[AT<] TIMEOUT (1063ms)
+
+[ESP] ===== USART1 link probe v2 =====
+[ESP] RCC_APB2ENR=0000400D AFIO_MAPR=04000000 GPIOA_CRH=888444B4
+[ESP] USART1 BRR=0271 CR1=202C SR=00C0
+[ESP] PA10 idle: pullup=1 pulldown=1 -> externally driven HIGH (module powered, TX idle)
+[ESP] TX pin PA9: low=15986/17693 -> toggles (AF output OK)
+[ESP] after AT@115200, PA10 edge scan 600ms: edges=0 low=0 -> no reply at all from module
+[ESP] sweep 115200 -> 0 byte(s) fe=0 ovr=0 head=
+[ESP] sweep  74880 -> 0 byte(s) fe=0 ovr=0 head=
+[ESP] sweep   9600 -> 0 byte(s) fe=0 ovr=0 head=
+[ESP] sweep  57600 -> 0 byte(s) fe=0 ovr=0 head=
+[ESP] sweep  38400 -> 0 byte(s) fe=0 ovr=0 head=
+[ESP] sweep  19200 -> 0 byte(s) fe=0 ovr=0 head=
+[ESP] listen-only @115200 1.5s -> 0 byte(s)
+[ESP] listen-only @ 74880 1.5s -> 0 byte(s)
+[ESP] after AT+RST, listen @74880 2.5s -> 0 byte(s) -> no boot log: TX not reaching module OR no AT firmware
+[ESP] loopback (short PA9-PA10) -> 0 byte(s) head=-> no loopback (jumper not fitted, or MCU TX/RX fault)
+[ESP] ==== probe done, restored to 115200 8N1 ====
+
+[RC522] MISO probe=3 (0=OK 1=LOW 2=HIGH 3=NODRIVE 4=DRIVEN)
+[OK] MFRC522 RFID (Version 0x92)
+[CARD] 1 card(s) loaded
+[WIFI] ssid="汉码未来" mqtt=mqtts.heclouds.com:1883
+[WIFI] pid=v4nyue7h41 dn=smartlock_001
+[BOOT] smart lock board ready
+[LOCK] locked
+[WIFI] AT -> CHECK
+[AT>] AT
+[AT<] TIMEOUT (1000ms)
+[AT>] AT
+[AT<] TIMEOUT (1015ms)
+[AT>] AT
+[AT<] TIMEOUT (1000ms)
+[AT>] AT
+[AT<] TIMEOUT (1075ms)
+[WIFI] CHECK timeout: no AT reply (check pwr/baud/TX-RX)
+[AT>] AT
+[AT<] TIMEOUT (1000ms)
+[AT>] AT
+[AT<] TIMEOUT (1051ms)
+[AT>] AT
+[AT<] TIMEOUT (1000ms)
+[AT>] AT
+[AT<] TIMEOUT (1000ms)
+[AT>] AT
+
+OK

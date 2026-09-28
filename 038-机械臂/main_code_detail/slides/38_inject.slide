@@ -1,0 +1,55 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 88, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 5 章 · PS2 控制 ★</Text>
+      <Text style={{ fontSize: 32, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>parse_psx_buf：伪装成串口注入</Text>
+    </Box>
+    {/* B 内容区：左注入 SVG + 右说明 */}
+    <Box style={{ flex: 1, marginTop: 10, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 560, background: '#0F172A', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center' }}>
+        <svg width='536' height='420' viewBox='0 0 536 420' style={{ display: 'block' }}>
+          <defs><marker id='ar4' markerWidth='10' markerHeight='10' refX='8' refY='3' orient='auto'><path d='M0,0 L8,3 L0,6 Z' fill='#64748B' /></marker></defs>
+          <rect x='10' y='20' width='516' height='50' rx='8' fill='#1E293B' stroke='#3B82F6' strokeWidth='2' />
+          <text x='268' y='50' fill='#E2E8F0' fontSize='14' textAnchor='middle'>&lt;PS2_RED01:#005P0600T2000!^#005PDST!&gt;</text>
+          <text x='268' y='88' fill='#94A3B8' fontSize='12' textAnchor='middle'>11字节标签前缀(&lt;PS2_REDxx:) 需剥离</text>
+          <path d='M268 70 V120' stroke='#64748B' strokeWidth='2' markerEnd='url(#ar4)' />
+          <rect x='10' y='120' width='516' height='50' rx='8' fill='#0B1120' stroke='#06B6D4' strokeWidth='2' />
+          <text x='268' y='150' fill='#06B6D4' fontSize='14' textAnchor='middle'>uart_receive_buf+11 → #005P0600T2000!</text>
+          <path d='M268 170 V210' stroke='#64748B' strokeWidth='2' markerEnd='url(#ar4)' />
+          <rect x='10' y='210' width='516' height='70' rx='8' fill='#1E293B' stroke='#FBBF24' strokeWidth='2.5' />
+          <text x='268' y='240' fill='#FBBF24' fontSize='14' textAnchor='middle' fontWeight='bold'>uart1_get_ok = 1</text>
+          <text x='268' y='264' fill='#94A3B8' fontSize='13' textAnchor='middle'>uart1_mode = 2 (含#) / 1 (含$)</text>
+          <path d='M268 280 V310' stroke='#64748B' strokeWidth='2' markerEnd='url(#ar4)' />
+          <rect x='10' y='310' width='516' height='60' rx='8' fill='#0B1120' stroke='#3B82F6' strokeWidth='2' />
+          <text x='268' y='338' fill='#E2E8F0' fontSize='14' textAnchor='middle' fontWeight='bold'>主循环 app_usart_run()</text>
+          <text x='268' y='360' fill='#94A3B8' fontSize='13' textAnchor='middle'>与真实串口收到的帧走同一管道</text>
+          <text x='268' y='405' fill='#64748B' fontSize='12' textAnchor='middle'>写缓冲时 uart1_close() 防 RX 中断打断</text>
+        </svg>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 18, color: '#E2E8F0', lineHeight: 1.6 }}>
+          按键表每一项形如 <span style={{ color: '#06B6D4' }}>&lt;PS2_REDxx:按下^松开&gt;</span>。parse_psx_buf 取出按下（或松开）命令后，必须<span style={{ color: '#FBBF24' }}>剥掉前 11 字节标签</span>。
+        </Text>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5 }}>
+            <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>+11 偏移</span>：<span style={{ color: '#06B6D4' }}>&lt;PS2_REDxx:</span> 恰好 11 字节，从 <span style={{ color: '#06B6D4' }}>uart_receive_buf+11</span> 起才是真正的 # / $ 指令。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5 }}>
+            <span style={{ color: '#06B6D4', fontWeight: 'bold' }}>置位即注入</span>：把纯命令写回缓冲，设 <span style={{ color: '#06B6D4' }}>uart1_get_ok=1</span> 与 <span style={{ color: '#06B6D4' }}>uart1_mode</span>，主循环下一轮就把当串口帧解析——<span style={{ color: '#FBBF24' }}>这就是「伪装串口」</span>。
+          </Text>
+        </Box>
+        <Text style={{ fontSize: 15, color: '#64748B', lineHeight: 1.6 }}>
+          好处：手柄与电脑串口共用 parse_action / parse_cmd 一条链路，不用为手柄单独写舵机驱动。蜂鸣器「滴」一声作物理反馈。
+        </Text>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>38 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

@@ -1,0 +1,14 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 80px', overflow: 'hidden' }}>
+    <Box style={{ position: 'absolute', right: 60, top: 80, fontSize: 280, fontWeight: 'bold', color: 'rgba(59,130,246,0.12)', lineHeight: 1 }}>03</Box>
+    <Text style={{ fontSize: 16, color: '#06B6D4', letterSpacing: 6, fontWeight: 'bold', position: 'relative' }}>CHAPTER 03</Text>
+    <Text style={{ fontSize: 72, color: '#E2E8F0', fontWeight: 'bold', marginTop: 16, position: 'relative' }}>
+      主循环与指令分发
+    </Text>
+    <Box style={{ width: 120, height: 4, background: 'linear-gradient(135deg,#3B82F6,#06B6D4)', marginTop: 24, position: 'relative' }} />
+    <Text style={{ fontSize: 22, color: '#94A3B8', marginTop: 26, lineHeight: 1.6, position: 'relative' }}>
+      初始化完成后，main() 进入 while(1)：5 个任务轮询。<Box /><br />
+      「指令分发」是心脏——它把数据主线上的帧，送到正确的解析函数。
+    </Text>
+  </Box>
+</Slide>

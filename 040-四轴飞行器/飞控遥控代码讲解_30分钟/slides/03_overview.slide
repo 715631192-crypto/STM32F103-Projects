@@ -1,0 +1,56 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#0A1626' }}>
+  <Box style={{ height: 120, padding: '24px 64px', borderBottom: '1px solid #1E3A5F' }}>
+    <Text style={{ fontSize: 34, fontWeight: 500, color: '#E8F0FA' }}>第 0 章 · 总览：同一个框架的两半</Text>
+    <Text style={{ fontSize: 16, color: '#9DB4CE', marginTop: 6 }}>飞控 = 飞机被控端；遥控 = 手柄控制端。两者都长这样——先建立心智模型</Text>
+  </Box>
+  <Box style={{ height: 540, padding: '24px 64px', flexDirection: 'row', gap: 40, alignItems: 'center' }}>
+    <Box style={{ width: '54%' }}>
+      <svg width='600' height='420' viewBox='0 0 600 420'>
+        <rect x='60' y='30' width='220' height='50' rx='10' fill='#1E3A5F' stroke='#00D1FF' strokeWidth='2'/>
+        <text x='170' y='60' fill='#E8F0FA' fontSize='18' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>飞控 main()</text>
+        <rect x='60' y='120' width='220' height='50' rx='10' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='170' y='150' fill='#C7D6E8' fontSize='15' textAnchor='middle' fontFamily='sans-serif'>ALL_Init() 外设初始化</text>
+        <rect x='60' y='210' width='220' height='50' rx='10' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='170' y='240' fill='#C7D6E8' fontSize='15' textAnchor='middle' fontFamily='sans-serif'>while(1) main_loop()</text>
+        <rect x='60' y='300' width='220' height='50' rx='10' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='170' y='330' fill='#C7D6E8' fontSize='15' textAnchor='middle' fontFamily='sans-serif'>IWDG_Feed() 喂狗</text>
+        <line x1='170' y1='80' x2='170' y2='120' stroke='#4A90D9' strokeWidth='2'/>
+        <line x1='170' y1='170' x2='170' y2='210' stroke='#4A90D9' strokeWidth='2'/>
+        <line x1='170' y1='260' x2='170' y2='300' stroke='#4A90D9' strokeWidth='2'/>
+        <line x1='170' y1='350' x2='170' y2='378' stroke='#4A90D9' strokeWidth='2'/>
+        <line x1='170' y1='378' x2='170' y2='378' stroke='#4A90D9' strokeWidth='2'/>
+        <path d='M170 378 C 170 400, 170 400, 170 400' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='300' y='395' fill='#7E94AE' fontSize='12' fontFamily='sans-serif'>↺ 轮询</text>
+
+        <rect x='360' y='30' width='200' height='50' rx='10' fill='#1E3A5F' stroke='#00D1FF' strokeWidth='2'/>
+        <text x='460' y='60' fill='#E8F0FA' fontSize='18' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>遥控 main()</text>
+        <rect x='360' y='120' width='200' height='50' rx='10' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='460' y='150' fill='#C7D6E8' fontSize='15' textAnchor='middle' fontFamily='sans-serif'>各 Init() 初始化</text>
+        <rect x='360' y='210' width='200' height='50' rx='10' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='460' y='240' fill='#C7D6E8' fontSize='15' textAnchor='middle' fontFamily='sans-serif'>while(1) 仅刷屏</text>
+        <rect x='360' y='300' width='200' height='50' rx='10' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='460' y='330' fill='#C7D6E8' fontSize='15' textAnchor='middle' fontFamily='sans-serif'>逻辑在 ANO_Loop</text>
+        <line x1='460' y1='80' x2='460' y2='120' stroke='#4A90D9' strokeWidth='2'/>
+        <line x1='460' y1='170' x2='460' y2='210' stroke='#4A90D9' strokeWidth='2'/>
+        <line x1='460' y1='260' x2='460' y2='300' stroke='#4A90D9' strokeWidth='2'/>
+      </svg>
+    </Box>
+    <Box style={{ width: '42%', flexDirection: 'column', gap: 18 }}>
+      <Text style={{ fontSize: 19, color: '#E8F0FA', lineHeight: 1.6 }}>
+        两份程序都是 <span style={{ color: '#00D1FF', fontWeight: 700 }}>STM32F103</span>，都遵循：时钟/SysTick 配置 → 外设初始化 → 进入轮询。
+      </Text>
+      <Box style={{ background: '#0F1E33', borderLeft: '4px solid #00D1FF', padding: '14px 20px', borderRadius: 8 }}>
+        <Text style={{ fontSize: 18, color: '#E8F0FA', lineHeight: 1.55 }}>
+          <span style={{ color: '#00D1FF', fontWeight: 700 }}>时间片轮询</span>：SysTick 中断累加计数器，主循环按"每 N 个 tick 跑一档任务"。所有业务逻辑都挂在 Duty_*/ANO_Loop_* 上，不阻塞。
+        </Text>
+      </Box>
+      <Text style={{ fontSize: 17, color: '#9DB4CE', lineHeight: 1.5 }}>
+        差异：飞控逻辑在 <span style={{ color: '#4A90D9' }}>main_loop()</span> 里跑；遥控逻辑在 <span style={{ color: '#4A90D9' }}>SysTick 触发的 ANO_Loop()</span> 里跑（while 只刷屏）。
+      </Text>
+    </Box>
+  </Box>
+  <Box style={{ height: 60, padding: '0 64px', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>飞控+遥控 代码讲解（30min）</Text>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>03 / 22</Text>
+  </Box>
+</Slide>

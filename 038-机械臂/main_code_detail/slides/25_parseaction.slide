@@ -1,0 +1,64 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 72, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 3 章 · 解析函数 ★</Text>
+      <Text style={{ fontSize: 30, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>parse_action：舵机移动的真正落地</Text>
+    </Box>
+    {/* B 内容区：上代码 + 下三分支 */}
+    <Box style={{ flex: 1, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <CodeBlock
+        code={`void parse_action(u8* buf)
+{
+    zx_uart_send_str(buf);          // ①整帧原样转发 USART3(总线舵机)
+    // ②分支1 偏差: #IDPSCK±bbb!  (改 duoji_doing[].cur + 存偏差)
+    // ③分支2 停止: #IDPDST!       (inc=0; aim=cur; 可广播255)
+    // ④通用解析: 逐字符找 #ID P pwm T time !
+    while (buf[i]) {
+        if (buf[i]=='#') { 解析ID; }
+        else if (buf[i]=='P') { 解析pwm; }
+        else if (buf[i]=='T') { 解析time;
+            if (index < DJ_NUM) {          // 仅本地PWM叠加偏差
+                pwm += eeprom_info.dj_bias_pwm[index];
+                duoji_doing_set(index, pwm, time);
+            }                              // 总线舵机已由①转发
+        }
+    }
+}`}
+        language='c'
+        width={1152}
+        fontSize={13}
+      />
+      <Box style={{ display: 'flex', flexDirection: 'row', gap: 14 }}>
+        <Box style={{ flex: 1, background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#E2E8F0', fontWeight: 'bold' }}>① 双发总线</Text>
+          <Text style={{ fontSize: 15, color: '#CBD5E1', lineHeight: 1.5, marginTop: 6 }}>
+            zx_uart_send_str 把整帧同时发 USART1(回显)+USART3(总线舵机)。总线舵机自己解析 #ID。
+          </Text>
+        </Box>
+        <Box style={{ flex: 1, background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#E2E8F0', fontWeight: 'bold' }}>② 偏差 SCK</Text>
+          <Text style={{ fontSize: 15, color: '#CBD5E1', lineHeight: 1.5, marginTop: 6 }}>
+            #IDPSCK±bbb! 调整零点，限 [-500,500]，写入 dj_bias_pwm[] 并掉电保存（rewrite_eeprom）。
+          </Text>
+        </Box>
+        <Box style={{ flex: 1, background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '12px 16px', borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 16, color: '#E2E8F0', fontWeight: 'bold' }}>③ 停止 PDST</Text>
+          <Text style={{ fontSize: 15, color: '#CBD5E1', lineHeight: 1.5, marginTop: 6 }}>
+            #IDPDST! 令 inc=0、aim=cur 原地停；ID=255 广播全停。曾误写成 PSTT 导致瞬跳，已修复。
+          </Text>
+        </Box>
+      </Box>
+      <Box style={{ background: 'rgba(15,23,42,0.6)', borderRadius: 8, padding: '10px 16px' }}>
+        <Text style={{ fontSize: 15, color: '#94A3B8', lineHeight: 1.5 }}>
+          <span style={{ color: '#06B6D4' }}>④ 通用 PWM</span>：只有 <span style={{ color: '#FBBF24' }}>index &lt; DJ_NUM</span> 的本地舵机才写 duoji_doing_set（叠加偏差）；总线舵机 ID 不在此范围，已被 ① 转发，不重复驱动。
+        </Text>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>25 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

@@ -1,0 +1,31 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 80px', overflow: 'hidden' }}>
+    {/* 背景电路网格装饰 */}
+    <svg width='1280' height='720' viewBox='0 0 1280 720' style={{ position: 'absolute', top: 0, left: 0, opacity: 0.25 }}>
+      <defs>
+        <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+          <stop offset='0%' stopColor='#3B82F6' />
+          <stop offset='100%' stopColor='#06B6D4' />
+        </linearGradient>
+      </defs>
+      <path d='M0 560 H420 V300 H760 V120 H1280' fill='none' stroke='url(#g)' strokeWidth='2' />
+      <path d='M0 200 H300 V440 H640 V600 H1280' fill='none' stroke='#3B82F6' strokeWidth='1' opacity='0.5' />
+      <circle cx='420' cy='560' r='5' fill='#FBBF24' />
+      <circle cx='760' cy='300' r='5' fill='#FBBF24' />
+      <circle cx='300' cy='200' r='5' fill='#06B6D4' />
+    </svg>
+
+    <Text style={{ fontSize: 15, color: '#06B6D4', letterSpacing: 5, fontWeight: 'bold', position: 'relative' }}>STM32F103 · 嵌入式代码讲解</Text>
+    <Text style={{ fontSize: 66, color: '#E2E8F0', fontWeight: 'bold', marginTop: 18, lineHeight: 1.12, position: 'relative' }}>
+      六轴机械臂主控代码详解
+    </Text>
+    <Box style={{ width: 120, height: 4, background: 'linear-gradient(135deg,#3B82F6,#06B6D4)', marginTop: 22, position: 'relative' }} />
+    <Text style={{ fontSize: 24, color: '#94A3B8', marginTop: 24, lineHeight: 1.6, position: 'relative' }}>
+      从 <span style={{ color: '#FBBF24', fontWeight: 'bold' }}>main()</span> 函数开始，按执行顺序逐函数读懂整套控制程序<Box /><br />
+      一条数据主线 · 双舵机通道 · 指令系统 · 分时 PWM · PS2 手柄
+    </Text>
+    <Text style={{ fontSize: 16, color: '#64748B', marginTop: 40, position: 'relative' }}>
+      基于本项目实际源码（main.c / app_usart / app_servo / app_ps2 / h_timer / h_ps2 / h_servo / h_usart）
+    </Text>
+  </Box>
+</Slide>

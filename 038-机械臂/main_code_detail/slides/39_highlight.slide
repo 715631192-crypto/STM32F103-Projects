@@ -1,0 +1,46 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>收束</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>架构总结：五个设计亮点</Text>
+    </Box>
+    {/* B 内容区：两列卡 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 24 }}>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'center' }}>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 20, color: '#3B82F6', fontWeight: 'bold' }}>① 一条数据主线</Text>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5, marginTop: 6 }}>uart_receive_buf + uart1_mode + uart1_get_ok 串起所有来源与去向，逻辑单一清晰。</Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 20, color: '#06B6D4', fontWeight: 'bold' }}>② 双舵机通道统一出口</Text>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5, marginTop: 6 }}>每条 # 帧既驱动本地 PWM 又转发总线，ID 路由自然分离两族舵机。</Text>
+        </Box>
+        <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '14px 18px', borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 20, color: '#FBBF24', fontWeight: 'bold' }}>③ 一个定时器分时 8 路</Text>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5, marginTop: 6 }}>TIM2 + ARR 动态赋值，以 2.5ms 时隙拼出 20ms 标准周期，省下 6 个硬件 PWM。</Text>
+        </Box>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'center' }}>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 20, color: '#3B82F6', fontWeight: 'bold' }}>④ 手柄「伪装成串口」</Text>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5, marginTop: 6 }}>边沿检测 + +11 剥离 + 注入缓冲，复用同一解析链路，无重复驱动代码。</Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 20, color: '#06B6D4', fontWeight: 'bold' }}>⑤ Flash 动作组</Text>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5, marginTop: 6 }}>尖括号换大括号直接存，回放即「多路帧」解析，掉电不丢、可循环播放。</Text>
+        </Box>
+        <Box style={{ background: 'rgba(15,23,42,0.6)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 16, color: '#94A3B8', lineHeight: 1.5 }}>
+            全局只有「串口状态机」一个协议分发表；其余都是围绕它的生产者（串口/手柄）与消费者（解析/执行）。这就是整套代码好读的根本原因。
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>39 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

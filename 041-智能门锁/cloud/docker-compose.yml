@@ -1,0 +1,30 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "8883:8883"
+    volumes:
+      - ./mosquitto:/mosquitto/config:ro
+      - mosquitto-data:/mosquitto/data
+
+  node-red:
+    image: nodered/node-red:4
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      SMART_LOCK_DEVICE_ID: ${SMART_LOCK_DEVICE_ID}
+      SMART_LOCK_DEVICE_SECRET_HEX: ${SMART_LOCK_DEVICE_SECRET_HEX}
+      NODE_RED_CREDENTIAL_SECRET: ${NODE_RED_CREDENTIAL_SECRET}
+      NODE_RED_UI_USER: ${NODE_RED_UI_USER:-admin}
+      NODE_RED_UI_PASSWORD_HASH: ${NODE_RED_UI_PASSWORD_HASH}
+      SMART_LOCK_ALERT_WEBHOOK_URL: ${SMART_LOCK_ALERT_WEBHOOK_URL:-}
+    ports:
+      - "127.0.0.1:1880:1880"
+    volumes:
+      - ./node-red:/data
+
+volumes:
+  mosquitto-data:

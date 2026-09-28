@@ -1,0 +1,39 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#0A1626' }}>
+  <Box style={{ height: 120, padding: '24px 64px', borderBottom: '1px solid #1E3A5F' }}>
+    <Text style={{ fontSize: 34, fontWeight: 500, color: '#E8F0FA' }}>第 11 章 · ANO_Loop_250Hz 发送控制</Text>
+    <Text style={{ fontSize: 16, color: '#9DB4CE', marginTop: 6 }}>文件：ANO_Remoter/ANO_DT.c · ANO_DT_Send_RCData() 第 16 行</Text>
+  </Box>
+  <Box style={{ height: 540, padding: '22px 64px', flexDirection: 'row', gap: 40 }}>
+    <Box style={{ width: '54%', justifyContent: 'center' }}>
+      <svg width='600' height='300' viewBox='0 0 600 300'>
+        <rect x='30' y='40' width='90' height='46' rx='8' fill='#1E3A5F' stroke='#00D1FF' strokeWidth='2'/>
+        <text x='75' y='68' fill='#00D1FF' fontSize='15' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>AA</text>
+        <rect x='130' y='40' width='90' height='46' rx='8' fill='#1E3A5F' stroke='#00D1FF' strokeWidth='2'/>
+        <text x='175' y='68' fill='#00D1FF' fontSize='15' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>AF</text>
+        <rect x='230' y='40' width='90' height='46' rx='8' fill='#1E3A5F' stroke='#00D1FF' strokeWidth='2'/>
+        <text x='275' y='68' fill='#00D1FF' fontSize='15' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>03</text>
+        <rect x='330' y='40' width='90' height='46' rx='8' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='375' y='68' fill='#C7D6E8' fontSize='14' textAnchor='middle' fontFamily='sans-serif'>LEN</text>
+        <rect x='30' y='120' width='540' height='46' rx='8' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='300' y='148' fill='#C7D6E8' fontSize='14' textAnchor='middle' fontFamily='sans-serif'>THR YAW ROL PIT AUX1~6（各 2 字节）</text>
+        <rect x='30' y='200' width='90' height='46' rx='8' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='75' y='228' fill='#C7D6E8' fontSize='14' textAnchor='middle' fontFamily='sans-serif'>SUM</text>
+        <text x='150' y='228' fill='#7E94AE' fontSize='13' fontFamily='sans-serif'>校验和</text>
+      </svg>
+    </Box>
+    <Box style={{ width: '42%', flexDirection: 'column', gap: 16, justifyContent: 'center' }}>
+      <Text style={{ fontSize: 18, color: '#E8F0FA', lineHeight: 1.6 }}>
+        组帧 <span style={{ color: '#00D1FF', fontFamily:'monospace' }}>AA AF 03</span> + 通道值 + 校验和，经 <span style={{ color:'#4A90D9', fontFamily:'monospace' }}>ANO_NRF_TxPacket()</span> 发往飞机。
+      </Text>
+      <Box style={{ background: '#0F1E33', borderLeft: '4px solid #00D1FF', padding: '14px 20px', borderRadius: 8 }}>
+        <Text style={{ fontSize: 17, color: '#E8F0FA', lineHeight: 1.5 }}>
+          若收到上位机数据则<span style={{ color: '#00D1FF', fontWeight: 700 }}>透传</span>；否则发遥控通道——这就是"手柄→飞机"的那一帧。
+        </Text>
+      </Box>
+    </Box>
+  </Box>
+  <Box style={{ height: 60, padding: '0 64px', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>飞控+遥控 代码讲解（30min）</Text>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>17 / 22</Text>
+  </Box>
+</Slide>

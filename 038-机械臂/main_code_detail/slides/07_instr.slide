@@ -1,0 +1,43 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 1 章 · 系统全景</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>指令系统总览（uart1_mode 的 5 种模式）</Text>
+    </Box>
+    {/* B 内容区：左说明 + 右对照表 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 330, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 20, color: '#E2E8F0', lineHeight: 1.7 }}>
+          串口中断在收到<span style={{ color: '#FBBF24', fontWeight: 'bold' }}>首字符</span>时即决定本帧属于哪种指令，对应一个 <span style={{ color: '#06B6D4' }}>uart1_mode</span>；收到对应<span style={{ color: '#FBBF24', fontWeight: 'bold' }}>结束符</span>后把 <span style={{ color: '#06B6D4' }}>uart1_get_ok</span> 置 1。
+        </Text>
+        <Text style={{ fontSize: 16, color: '#64748B', marginTop: 16, lineHeight: 1.6 }}>
+          主循环检测到 get_ok=1 就调用 app_usart_run()，再按 mode 路由到具体解析函数。这是全系统唯一的「协议分发表」。
+        </Text>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'center' }}>
+        {[
+          { m: '1', sc: '$', ex: '$DJR!  $DST!  $DGT:0-2,3!', fn: 'parse_cmd', d: '系统命令' },
+          { m: '2', sc: '#', ex: '#005P0600T2000!', fn: 'parse_action', d: '单舵机移动' },
+          { m: '3', sc: '{', ex: '{多路舵机}', fn: 'parse_action', d: '多路舵机（共用）' },
+          { m: '4', sc: '<', ex: '<G0000#000P...!>', fn: 'save_action', d: '动作组存 Flash' },
+          { m: '5', sc: 'S', ex: 'S,005,90D', fn: 'parse_angle', d: '角度模式（新增）' },
+        ].map((it) => (
+          <Box key={it.m} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14, background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '10px 16px' }}>
+            <Text style={{ fontSize: 22, color: '#FBBF24', fontWeight: 'bold', width: 44 }}>{`mode ${it.m}`}</Text>
+            <Text style={{ fontSize: 22, color: '#06B6D4', fontWeight: 'bold', width: 36 }}>{it.sc}</Text>
+            <Box style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, color: '#E2E8F0', fontWeight: 'bold' }}>{it.fn} <span style={{ color: '#94A3B8', fontWeight: 'normal', fontSize: 14 }}>· {it.d}</span></Text>
+              <Text style={{ fontSize: 14, color: '#94A3B8' }}>{it.ex}</Text>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>07 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

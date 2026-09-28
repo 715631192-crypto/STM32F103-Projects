@@ -1,0 +1,4 @@
+user door-001
+topic read smartlock/door-001/command
+topic write smartlock/door-001/event
+topic write smartlock/door-001/state

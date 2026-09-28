@@ -1,0 +1,53 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 2 章 · 初始化 ⑦</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>app_usart_init：双串口各司其职</Text>
+    </Box>
+    {/* B 内容区：左代码 + 右说明 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 600 }}>
+        <CodeBlock
+          code={`/* app_usart.c */
+void app_usart_init(void)
+{
+    uart1_init(115200);   // 串口1: PA9/TX PA10/RX
+    uart3_init(115200);   // 串口3: PB10/TX PB11/RX
+    Usartprintf(USART_DEBUG, "UART13_INIT SUCCESS\\r\\n");
+}
+
+/* h_usart.c —— 两个串口都开 RXNE 接收中断 */
+USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);`}
+          language='c'
+          width={600}
+          fontSize={15}
+        />
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'center' }}>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.6 }}>
+            <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>串口1（USART1）</span>：对电脑/上位机，收发调试与指令。PA9 发、PA10 收。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.6 }}>
+            <span style={{ color: '#06B6D4', fontWeight: 'bold' }}>串口3（USART3）</span>：专门下发给 6 个总线舵机。PB10 发、PB11 收。
+          </Text>
+        </Box>
+        <Text style={{ fontSize: 16, color: '#E2E8F0', lineHeight: 1.65 }}>
+          两个串口都开<span style={{ color: '#FBBF24' }}>接收中断</span>，且共用同一套 <span style={{ color: '#06B6D4' }}>uart1_mode / uart_receive_buf</span> 状态机——所以 UART1 和 UART3 收到的指令走完全相同的解析链路。
+        </Text>
+        <Text style={{ fontSize: 15, color: '#64748B', lineHeight: 1.6 }}>
+          波特率 115200；总线舵机对波特率敏感，必须与此一致。USART_DEBUG 宏指向调试串口用于打印日志。
+        </Text>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>15 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

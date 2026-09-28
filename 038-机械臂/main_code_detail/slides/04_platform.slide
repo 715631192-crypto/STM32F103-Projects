@@ -1,0 +1,39 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 1 章 · 系统全景</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>项目与硬件平台</Text>
+    </Box>
+    {/* B 内容区：左概述 + 右参数卡 */}
+    <Box style={{ flex: 1, marginTop: 18, display: 'flex', flexDirection: 'row', gap: 32 }}>
+      <Box style={{ width: 440, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 21, color: '#E2E8F0', lineHeight: 1.7 }}>
+          这是一套基于 <span style={{ color: '#FBBF24', fontWeight: 'bold' }}>STM32F103</span>（Cortex-M3，72MHz）的六轴舵机机械臂控制器。<Box /><br /><br />
+          <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>控制入口有两个</span>：电脑串口助手，和 PS2 无线手柄。两者产生的指令形态完全一致，因此代码只需维护一条解析链路。<Box /><br /><br />
+          <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>执行机构分两族</span>：6 路 PWM 舵机（TIM2 分时输出）与 6 个总线舵机（USART3 串口下发）。
+        </Text>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+        {[
+          { k: 'MCU', v: 'STM32F103C8T6 · 72MHz · 串口1/3 + TIM2 + GPIO 模拟 SPI' },
+          { k: 'PWM 舵机', v: '6 路（0~5 号）：PB3 / PB8 / PB9 / PB6 / PB7 / PB4' },
+          { k: '总线舵机', v: '6 个：USART3（PB10/TX）115200，广播 ID=255' },
+          { k: '手柄', v: 'PS2 双模（红灯=舵机 / 绿灯=底盘），GPIO 模拟 SPI' },
+          { k: '存储', v: 'W25Q64 Flash（动作组 / 偏差值掉电保存）' },
+          { k: '波特率', v: ' USART1、USART3 均为 115200' },
+        ].map((it) => (
+          <Box key={it.k} style={{ display: 'flex', flexDirection: 'row', gap: 16, background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 18px', alignItems: 'center' }}>
+            <Text style={{ fontSize: 18, color: '#06B6D4', fontWeight: 'bold', width: 92 }}>{it.k}</Text>
+            <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.4 }}>{it.v}</Text>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>04 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

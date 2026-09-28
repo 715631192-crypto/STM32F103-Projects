@@ -1,0 +1,55 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 1 章 · 系统全景</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>双舵机通道：PWM 0~5 与总线 6 个</Text>
+    </Box>
+    {/* B 内容区：左 SVG + 右文字 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 520, background: '#0F172A', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center' }}>
+        <svg width='496' height='400' viewBox='0 0 496 400' style={{ display: 'block' }}>
+          <defs>
+            <linearGradient id='g1' x1='0' y1='0' x2='1' y2='0'><stop offset='0%' stopColor='#3B82F6' /><stop offset='100%' stopColor='#06B6D4' /></linearGradient>
+          </defs>
+          <text x='20' y='30' fill='#3B82F6' fontSize='18' fontWeight='bold'>通道 A · PWM 舵机</text>
+          <rect x='20' y='50' width='150' height='60' rx='8' fill='#1E293B' stroke='#3B82F6' strokeWidth='2' />
+          <text x='95' y='86' fill='#E2E8F0' fontSize='16' textAnchor='middle' fontWeight='bold'>TIM2 中断</text>
+          <text x='130' y='130' fill='#94A3B8' fontSize='13' textAnchor='middle'>分时 8 槽</text>
+          {[['0 PB3','30'],['1 PB8','90'],['2 PB9','150'],['3 PB6','210'],['4 PB7','270'],['5 PB4','330']].map((p) => (
+            <g key={p[0]}>
+              <path d='M170 80 H230' stroke='#64748B' strokeWidth='1.5' />
+              <rect x='230' y={Number(p[1])+40} width='240' height='40' rx='6' fill='#1E293B' stroke='#06B6D4' strokeWidth='1.5' />
+              <text x='350' y={Number(p[1])+65} fill='#CBD5E1' fontSize='15' textAnchor='middle'>{`舵机 ${p[0]}`}</text>
+            </g>
+          ))}
+          <text x='20' y='388' fill='#FBBF24' fontSize='13'>DJ_NUM=8（6 路有脚 + 2 槽留空）</text>
+        </svg>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, justifyContent: 'center' }}>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 20, color: '#3B82F6', fontWeight: 'bold' }}>A 通道 · PWM 舵机（0~5 号）</Text>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.6, marginTop: 6 }}>
+            由 <span style={{ color: '#FBBF24' }}>TIM2</span> 中断「分时复用」输出 6 路 20ms 周期 PWM，引脚 PB3/8/9/6/7/4。位置由 <span style={{ color: '#06B6D4' }}>duoji_doing[].cur</span> 决定，仅受本地驱动。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 20, color: '#06B6D4', fontWeight: 'bold' }}>B 通道 · 总线舵机（6 个）</Text>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.6, marginTop: 6 }}>
+            走 <span style={{ color: '#FBBF24' }}>USART3</span>（PB10 发）115200，自身解析 <span style={{ color: '#06B6D4' }}>#IDPposTtime!</span>。代码用广播 <span style={{ color: '#06B6D4' }}>#255</span> 一次命中全部，不进 TIM2。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '14px 18px', borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 17, color: '#E2E8F0', lineHeight: 1.6 }}>
+            <span style={{ color: '#FBBF24', fontWeight: 'bold' }}>同一帧双发</span>：每条 <span style={{ color: '#06B6D4' }}>#xxx</span> 指令既被 <span style={{ color: '#06B6D4' }}>zx_uart_send_str</span> 原样转发 USART3（总线），又对 <span style={{ color: '#06B6D4' }}>index&lt;DJ_NUM</span> 的本地 PWM 舵机写波形。
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>06 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

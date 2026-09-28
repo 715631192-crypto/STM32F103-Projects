@@ -1,0 +1,47 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 2 章 · 初始化 ⑥</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>spi_flash_init：W25Q64 存储</Text>
+    </Box>
+    {/* B 内容区：左说明 + 右要点 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 560, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 19, color: '#E2E8F0', lineHeight: 1.7 }}>
+          W25Q64 是一颗 <span style={{ color: '#FBBF24' }}>8MB SPI Flash</span>，用来掉电保存：<Box /><br />
+          • <span style={{ color: '#06B6D4' }}>动作组</span>（上位机下发的 &lt;Gxxxx…&gt;）<Box /><br />
+          • <span style={{ color: '#06B6D4' }}>舵机偏差值</span> dj_bias_pwm[]（调零校准）<Box /><br />
+          • <span style={{ color: '#06B6D4' }}>开机预执行命令</span> pre_cmd
+        </Text>
+        <Text style={{ fontSize: 18, color: '#E2E8F0', lineHeight: 1.7, marginTop: 16 }}>
+          它通过 SPI 总线访问，初始化时配置 SPI 时钟、片选，并读取已存信息到 <span style={{ color: '#06B6D4' }}>eeprom_info</span> 全局结构体。
+        </Text>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.6 }}>
+            <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>与 LED 引脚冲突</span><Box /><br />
+            Flash 的 SPI 占用 PB13，而 PB13 也是 LED 脚。函数在内部用 <span style={{ color: '#06B6D4' }}>spiFlashOn(0)</span> 把引脚还原成 LED，避免 LED 失灵。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.6 }}>
+            <span style={{ color: '#06B6D4', fontWeight: 'bold' }}>擦写代价</span><Box /><br />
+            Flash 按「扇区(4KB)」擦除、按字节写。save_action / rewrite_eeprom 都先擦后写，且中间用 <span style={{ color: '#06B6D4' }}>Delay_ms(10)</span> 等 SPI 稳定。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '14px 18px', borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 16, color: '#E2E8F0', lineHeight: 1.55 }}>
+            只有组号是 16 的倍数（0/16/32…）才会擦对应扇区；非 16 倍数组号与组 0 共用扇区且不擦除，重存可能残留旧数据。
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>14 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

@@ -1,0 +1,112 @@
+﻿
+@0.5s| [RC522] MISO probe=3 (0=OK 1=LOW 2=HIGH 3=NODRIVE 4=DRIVEN)
+[OK] MFRC522 RFID (Version 0x92)
+
+@3.5s| [WIFI] ssid="汉码未来" mqtt=mqtts.heclouds.com:1883
+[WIFI] pid=v4nyue7h41 dn=smartlock_001
+[BOOT] smart lock board ready
+[LOCK] locked
+[WIFI] AT -> CHECK
+
+@4.7s| [AT>] AT
+[ESP] AT
+[ESP] OK
+[AT<] OK (2ms)
+[AT>] AT+GMR
+[ESP] AT+GMR
+[ESP] AT version:0.40.0.0(Aug  8 2015 14:45:58)
+[ESP] SDK version:1.3.0
+[ESP] Ai-Thinker Technology Co.,Ltd.
+[ESP] Build:1.3.0.2 Sep 11 2015 11:48:04
+[ESP] OK
+[AT<] OK (19ms)
+[WIFI] CHECK -> JOIN (AT ok)
+
+@4.8s| [AT>] AT+CWMODE=1
+[ESP] AT+CWMODE=1
+[ESP] OK
+[AT<] OK (4ms)
+[AT>] AT+CWDHCP=1,1
+[ESP] AT+CWDHCP=1,1
+[ESP] OK
+[AT<] OK (5ms)
+[AT>] AT+CWJAP?
+[ESP] AT+CWJAP?
+[ESP] No AP
+[ESP] OK
+
+@7.8s| [AT<] TIMEOUT (3028ms)
+[WIFI] join AP ssid="汉码未来" ...
+[AT>] AT+CWJAP="汉码未来","hanmaweilai601"
+
+@7.9s| [ESP] AT+CWJAP="汉码未来","hanmaweilai601"
+
+@12.2s| [ESP] WIFI CONNECTED
+
+@12.8s| [ESP] WIFI GOT IP
+[AT<] OK (5028ms)
+[WIFI] GOT IP
+[WIFI] JOIN
+@12.9s|  -> MQTT (WiFi ok)
+
+@17.9s| [MQTT] now=1789372433, et=1820908433
+[MQTT] token len=134 res=products/v4nyue7h41/devices/smartlock_001
+[TCP] connect mqtts.heclouds.com:1883 ...
+[AT>] AT+CIPSTART="TCP","mqtts.heclouds.com",1883
+[ESP] AT+CIPSTART="TCP","mqtts.heclouds.com",1883
+[ESP] CONNECT
+[ESP] OK
+[AT<] OK (83ms)
+[TCP] connected
+[MQTT] CONNECT 176 bytes
+[AT>] AT+CI
+@18.1s| PSEND=176
+[ESP] AT+CIPSEND=176
+[ESP] OK
+[AT<] OK (5ms)
+[ESP]  
+[ESP] Recv 176 bytes
+[ESP] SEND OK
+[MQTT] wait CONNACK ...
+[MQTT] CONNECTED
+[WIFI] MQTT -> SUB (MQTT ok)
+
+@22.9s| [AT>] AT+CIPSEND=55
+[ESP] AT+CIPSEND=55
+[ESP] OK
+[AT<] OK (4ms)
+[ESP]  
+[ESP] Recv 55 bytes
+
+@23.1s| [ESP] SEND OK
+[MQTT] SUBACK ok
+[MQTT] sub ok: $sys/v4nyue7h41/smartlock_001/thing/property/set
+[AT>] AT+CIPSEND=59
+[ESP] AT+CIPSEND=59
+[ESP] OK
+[AT<] OK (4ms)
+[ESP]  
+[ESP] Recv 59 bytes
+[ESP] SEND OK
+[MQTT] SUBACK ok
+[MQTT] sub ok: $sys/v4nyue7h41/smartlock_001/thing/service/+/invoke
+[MQTT] subscribed (all)
+[WIFI] SUB -> RUN (subscribed, ONLINE)
+[AT>] AT+CIPSEND=120
+[ESP] AT+CIPSEND=120
+[ESP] OK
+[AT<] OK (4ms)
+[ESP]  
+[ESP] Recv 1
+@23.2s| 20 bytes
+[ESP] SEND OK
+
+@53.1s| [AT>] AT+CIPSEND=120
+[ESP] AT+CIPSEND=120
+[ESP] OK
+[AT<] OK (5ms)
+[ESP]  
+[ESP] Recv 120 bytes
+
+@53.5s| [ESP] SEND OK
+

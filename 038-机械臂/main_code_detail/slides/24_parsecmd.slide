@@ -1,0 +1,45 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 3 章 · 解析函数</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>parse_cmd：所有 $ 系统命令</Text>
+    </Box>
+    {/* B 内容区：左说明 + 右命令全表 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 330, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 18, color: '#E2E8F0', lineHeight: 1.7 }}>
+          <span style={{ color: '#FBBF24', fontWeight: 'bold' }}>parse_cmd()</span> 用一串 <span style={{ color: '#06B6D4' }}>str_contain_str</span> 判断缓冲里含哪个关键字，命中即执行。
+        </Text>
+        <Text style={{ fontSize: 16, color: '#64748B', marginTop: 14, lineHeight: 1.6 }}>
+          每命令先 <span style={{ color: '#06B6D4' }}>sscanf</span> 取参数（组号/次数），再调用对应动作函数。下面是它支持的全部指令。
+        </Text>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, justifyContent: 'center' }}>
+        {[
+          ['$DST!', '全部舵机停止', '广播 #255PDST! + PWM 全停'],
+          ['$DST:x!', '第 x 个舵机停止', '带越界检查 0≤x<DJ_NUM'],
+          ['$RST!', '单片机软件复位', 'NVIC_SystemReset（不回中总线舵机）'],
+          ['$DCR:...', '绿灯四路差速', '原样转发给底盘控制板'],
+          ['$PTG:x-y!', '读取动作组', 'print_group 发回串口1'],
+          ['$DGS:x!', '执行第 x 组一次', 'do_group_once(x)'],
+          ['$DGT:x-y,z!', '执行 x~y 组 z 次', 'loop_action 循环'],
+          ['$DJR!', '全部舵机回中', '广播 #255P1500 + PWM 1500'],
+          ['$GETA!', '应答信号', '回 AAA'],
+          ['$BEEP!', '蜂鸣器响', 'beep_on_times(1,100)'],
+        ].map((it) => (
+          <Box key={it[0]} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14, background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '8px 16px' }}>
+            <Text style={{ fontSize: 17, color: '#FBBF24', fontWeight: 'bold', width: 130, fontFamily: 'JetBrains Mono, monospace' }}>{it[0]}</Text>
+            <Text style={{ fontSize: 16, color: '#E2E8F0', width: 150, fontWeight: 'bold' }}>{it[1]}</Text>
+            <Text style={{ fontSize: 14, color: '#94A3B8' }}>{it[2]}</Text>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>24 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

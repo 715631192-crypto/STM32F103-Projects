@@ -1,0 +1,45 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>CONTENTS</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>讲解目录（5 章 41 页）</Text>
+    </Box>
+    {/* B 内容区 */}
+    <Box style={{ flex: 1, marginTop: 18, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      {/* 左：引言 */}
+      <Box style={{ width: 300, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 22, color: '#E2E8F0', lineHeight: 1.6 }}>
+          本讲解沿 <span style={{ color: '#FBBF24', fontWeight: 'bold' }}>main()</span> 的执行流展开：<Box /><br />
+          先看清「系统怎么转」，再逐行拆「初始化」与「主循环」里每一个被调用的函数。
+        </Text>
+        <Text style={{ fontSize: 16, color: '#64748B', marginTop: 18, lineHeight: 1.6 }}>
+          每个函数单独成页，配源码片段 + 逐行拆解 + 调用关系，避免「只讲框图不讲实现」。
+        </Text>
+      </Box>
+      {/* 右：五章条目 */}
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'center' }}>
+        {[
+          { n: '01', t: '系统全景：一条数据主线', d: '硬件平台 / 数据主线 / 双舵机通道 / 指令系统 / 舵机结构体' },
+          { n: '02', t: 'main() 初始化十步详解', d: 'SWJ→时钟→SysTick→GPIO→Flash→双串口→舵机→TIM2→PS2' },
+          { n: '03', t: '主循环与指令分发', d: 'while(1) 五任务 / app_usart_run / 串口状态机 / 三类解析函数' },
+          { n: '04', t: '动作组：保存·回放·执行', d: 'save_action / loop_action / do_group_once / getMaxTime' },
+          { n: '05', t: '波形输出与 PS2 控制', d: 'TIM2 分时 PWM / servo 驱动 / PS2 边沿检测与伪装串口' },
+        ].map((it) => (
+          <Box key={it.n} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 18, background: 'rgba(59,130,246,0.08)', borderLeft: '4px solid #3B82F6', borderRadius: 8, padding: '14px 20px' }}>
+            <Text style={{ fontSize: 30, color: '#3B82F6', fontWeight: 'bold', width: 56 }}>{it.n}</Text>
+            <Box>
+              <Text style={{ fontSize: 22, color: '#E2E8F0', fontWeight: 'bold' }}>{it.t}</Text>
+              <Text style={{ fontSize: 15, color: '#94A3B8', marginTop: 3 }}>{it.d}</Text>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>02 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

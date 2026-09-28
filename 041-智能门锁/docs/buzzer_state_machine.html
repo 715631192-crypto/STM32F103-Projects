@@ -1,0 +1,183 @@
+<html style="margin:0;padding:0;">
+<title>蜂鸣节拍状态机实现解析</title>
+<div style="width:100%;box-sizing:border-box;font-family:'Microsoft YaHei',system-ui,sans-serif;background:#f7f8fa;color:#1f2430;padding:24px;line-height:1.6;">
+  <!-- 标题区 -->
+  <div style="background:#fff;border:1px solid #e3e6eb;border-radius:10px;padding:18px 22px;margin-bottom:18px;">
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px;">蜂鸣节拍状态机（buzzer_process）实现解析</div>
+    <div style="font-size:14px;color:#5a6472;">项目：STM32F103C8 智能门锁 · firmware/HARDWARE/buzzer.c · 非阻塞节拍驱动，10ms 步进一拍</div>
+  </div>
+
+  <!-- ① 调用链 -->
+  <div style="background:#fff;border:1px solid #e3e6eb;border-radius:10px;padding:18px 22px;margin-bottom:18px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px;">① 从业务事件到电平翻转：整条调用链</div>
+    <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;">
+      <div style="flex:1;min-width:120px;background:#eef3fb;border:1px solid #c8d6ec;border-radius:8px;padding:8px 10px;font-size:13px;">
+        <div style="font-weight:700;">业务事件</div>
+        <div style="color:#5a6472;">按键 / 触摸唤醒 / 验证成功·失败 / 报警 / 门虚掩</div>
+      </div>
+      <div style="align-self:center;color:#9aa3af;font-size:16px;">→</div>
+      <div style="flex:1;min-width:120px;background:#eef3fb;border:1px solid #c8d6ec;border-radius:8px;padding:8px 10px;font-size:13px;">
+        <div style="font-weight:700;">buzzer_beep(mode)</div>
+        <div style="color:#5a6472;">换节拍表 → s_idx=0 → s_tlast=millis() → 先 OFF</div>
+      </div>
+      <div style="align-self:center;color:#9aa3af;font-size:16px;">→</div>
+      <div style="flex:1;min-width:120px;background:#eef3fb;border:1px solid #c8d6ec;border-radius:8px;padding:8px 10px;font-size:13px;">
+        <div style="font-weight:700;">input_task 循环</div>
+        <div style="color:#5a6472;">vTaskDelay(10ms) 固定节拍，FreeRTOS 任务</div>
+      </div>
+      <div style="align-self:center;color:#9aa3af;font-size:16px;">→</div>
+      <div style="flex:1;min-width:120px;background:#eef3fb;border:1px solid #c8d6ec;border-radius:8px;padding:8px 10px;font-size:13px;">
+        <div style="font-weight:700;">board_poll_input()</div>
+        <div style="color:#5a6472;">首行调用 buzzer_process() / rgb_process()</div>
+      </div>
+      <div style="align-self:center;color:#9aa3af;font-size:16px;">→</div>
+      <div style="flex:1;min-width:120px;background:#fff7e8;border:1px solid #f0d9a8;border-radius:8px;padding:8px 10px;font-size:13px;">
+        <div style="font-weight:700;">buzzer_process()</div>
+        <div style="color:#5a6472;">状态机步进一拍：到点则翻转 PC15 电平</div>
+      </div>
+      <div style="align-self:center;color:#9aa3af;font-size:16px;">→</div>
+      <div style="flex:1;min-width:120px;background:#eafaf0;border:1px solid #bfe6cd;border-radius:8px;padding:8px 10px;font-size:13px;">
+        <div style="font-weight:700;">PC15 输出</div>
+        <div style="color:#5a6472;">低电平触发（NPN 三极管驱动有源蜂鸣器）</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:#5a6472;margin-top:10px;">关键：蜂鸣不占用任务阻塞（无 delay 等待），10ms 步进与 RGB 灯效同节拍，蜂鸣期间认证 / 键盘 / 网络照常运行。</div>
+  </div>
+
+  <!-- ② 节拍表与波形 -->
+  <div style="background:#fff;border:1px solid #e3e6eb;border-radius:10px;padding:18px 22px;margin-bottom:18px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px;">② 节拍表 = 一张“响/停”时长表（数值单位 10ms）</div>
+    <div style="font-size:13px;color:#5a6472;margin-bottom:12px;">
+      约定：索引 0 = 初始停顿（保持 OFF）；之后 <b style="color:#c2562a;">奇数索引 = 响</b>、<b style="color:#5a6472;">偶数索引 = 停</b>；
+      <span style="background:#f0f1f3;padding:0 6px;border-radius:4px;">(uint16_t)-1 = 0xFFFF</span> 为结束符。
+      每个节拍持续 值×10ms 后自动切到下一拍。
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:4px;font-size:13px;"><span style="width:12px;height:12px;background:#c2562a;border-radius:2px;display:inline-block;"></span>响</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:13px;"><span style="width:12px;height:12px;background:#dfe3e8;border-radius:2px;display:inline-block;"></span>停</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:13px;"><span style="width:12px;height:12px;border:1px dashed #c8ccd2;border-radius:2px;display:inline-block;"></span>结束符 -1</div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <!-- KEY -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #eef0f3;">
+        <div style="width:130px;font-size:13px;"><b>BEEP_KEY</b><br><span style="color:#5a6472;">短鸣 50ms</span></div>
+        <div style="display:flex;align-items:flex-end;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#dfe3e8;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">5</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#c2562a;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">5</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;border:1px dashed #c8ccd2;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">-1</span></div>
+        </div>
+        <div style="font-size:12px;color:#5a6472;">停 50ms → 响 50ms → 结束</div>
+      </div>
+      <!-- OK -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #eef0f3;">
+        <div style="width:130px;font-size:13px;"><b>BEEP_OK</b><br><span style="color:#5a6472;">一长 300ms</span></div>
+        <div style="display:flex;align-items:flex-end;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#dfe3e8;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">0</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:42px;height:22px;background:#c2562a;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">30</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;border:1px dashed #c8ccd2;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">-1</span></div>
+        </div>
+        <div style="font-size:12px;color:#5a6472;">无停顿 → 响 300ms → 结束</div>
+      </div>
+      <!-- ERR -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #eef0f3;">
+        <div style="width:130px;font-size:13px;"><b>BEEP_ERR</b><br><span style="color:#5a6472;">两短</span></div>
+        <div style="display:flex;align-items:flex-end;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#dfe3e8;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">10</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#c2562a;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">10</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#dfe3e8;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">10</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#c2562a;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">10</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;border:1px dashed #c8ccd2;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">-1</span></div>
+        </div>
+        <div style="font-size:12px;color:#5a6472;">停 100ms → 响 100ms → 停 100ms → 响 100ms → 结束</div>
+      </div>
+      <!-- LOCKOUT -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #eef0f3;">
+        <div style="width:130px;font-size:13px;"><b>BEEP_LOCKOUT</b><br><span style="color:#5a6472;">四短急促</span></div>
+        <div style="display:flex;align-items:flex-end;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#dfe3e8;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">8</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#c2562a;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">8</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#dfe3e8;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">8</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#c2562a;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">8</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#dfe3e8;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">8</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#c2562a;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">8</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;border:1px dashed #c8ccd2;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">-1</span></div>
+        </div>
+        <div style="font-size:12px;color:#5a6472;">4 次“停 80ms + 响 80ms”（共 640ms）→ 结束</div>
+      </div>
+      <!-- ALARM -->
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #eef0f3;">
+        <div style="width:130px;font-size:13px;"><b>BEEP_ALARM</b><br><span style="color:#5a6472;">长鸣 5s</span></div>
+        <div style="display:flex;align-items:flex-end;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;background:#dfe3e8;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">0</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:120px;height:22px;background:#c2562a;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">500</span></div>
+          <div style="width:1px;height:24px;background:#c8ccd2;margin:0 4px;"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:7px;height:22px;border:1px dashed #c8ccd2;border-radius:2px;"></div><span style="font-size:11px;color:#8a94a2;">-1</span></div>
+        </div>
+        <div style="font-size:12px;color:#5a6472;">响 500×10ms = 5s 长鸣（防撬报警）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 状态机步进 -->
+  <div style="background:#fff;border:1px solid #e3e6eb;border-radius:10px;padding:18px 22px;margin-bottom:18px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px;">③ buzzer_process() 每 10ms 的步进逻辑</div>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;">
+      <div style="flex:1;min-width:300px;background:#fafbfc;border:1px solid #e3e6eb;border-radius:8px;padding:14px 16px;font-size:13px;font-family:Consolas,'Courier New',monospace;white-space:pre;overflow-x:auto;">void buzzer_process(void)   // 10ms 调用一次
+{
+    if (s_pattern == 0) return;          // 空闲：无模式在播
+    dur = s_pattern[s_idx];              // 取当前拍时长(×10ms)
+    if (dur == -1) {                     // 上一拍播完，本次收尾
+        BUZZER_OFF(); s_pattern = 0;     // 关响 + 清模式
+        return;
+    }
+    if ((millis()-s_tlast) >= dur*10) {  // 当前拍到点？
+        s_tlast = millis();              // 记录切换时刻
+        s_idx++;                         // 进下一拍
+        if (s_pattern[s_idx] == -1)      // 下拍是结束符
+            BUZZER_OFF();                //   → 关响（下周期清表）
+        else if (s_idx % 2)              // 奇数拍
+            BUZZER_ON();                 //   → 响
+        else                             // 偶数拍
+            BUZZER_OFF();                //   → 停
+    }
+}</div>
+      <div style="flex:1;min-width:300px;font-size:13px;color:#2a3140;">
+        <div style="font-weight:700;margin-bottom:6px;">设计要点</div>
+        <div style="margin-bottom:8px;">▸ <b>非阻塞</b>：只用 3 个状态变量（模式指针 / 节拍索引 / 切换时刻），无阻塞等待，10ms 一拍与 RGB 同节拍。</div>
+        <div style="margin-bottom:8px;">▸ <b>时间基准</b>：<span style="background:#f0f1f3;padding:0 6px;border-radius:4px;">(millis()-s_tlast)</span> 无符号减法，自动容忍 millis() 回绕。</div>
+        <div style="margin-bottom:8px;">▸ <b>“停”拍无需反复写</b>：电平只在到点时翻转一次，停拍期间保持上次 OFF 状态（beep 入口已先关一次）。</div>
+        <div style="margin-bottom:8px;">▸ <b>触发即重播</b>：buzzer_beep() 直接换表并复位，连续按键时每次按键都从头播，天然支持“抢拍”。</div>
+        <div style="margin-bottom:8px;">▸ <b>结束收尾分两拍</b>：s_idx++ 后遇 -1 只先关响，下一个 10ms 的 “dur==-1” 分支才清 s_pattern=0 —— 功能无影响。</div>
+        <div>▸ <b>LOCKOUT 预留</b>：pat_lockout 已定义，但当前应用层锁定（LOCK_STATE_LOCKOUT）走的是 board_auth_feedback(false)→BEEP_ERR，四短音尚未接线。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 业务触发点 -->
+  <div style="background:#fff;border:1px solid #e3e6eb;border-radius:10px;padding:18px 22px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px;">④ 项目中的触发点（board_port.c / smart_lock_app.c）</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <div style="flex:1;min-width:150px;background:#eef3fb;border:1px solid #c8d6ec;border-radius:8px;padding:8px 10px;font-size:13px;"><b>BEEP_KEY</b><div style="color:#5a6472;">触摸唤醒(PA8)、菜单按键、键盘按键</div></div>
+      <div style="flex:1;min-width:150px;background:#eef3fb;border:1px solid #c8d6ec;border-radius:8px;padding:8px 10px;font-size:13px;"><b>BEEP_OK</b><div style="color:#5a6472;">验证成功（board_auth_feedback(true)）、菜单操作成功</div></div>
+      <div style="flex:1;min-width:150px;background:#eef3fb;border:1px solid #c8d6ec;border-radius:8px;padding:8px 10px;font-size:13px;"><b>BEEP_ERR</b><div style="color:#5a6472;">验证失败、密码错误、门虚掩提醒</div></div>
+      <div style="flex:1;min-width:150px;background:#eef3fb;border:1px solid #c8d6ec;border-radius:8px;padding:8px 10px;font-size:13px;"><b>BEEP_ALARM</b><div style="color:#5a6472;">报警开启（board_alarm_set(true)），关闭时 buzzer_stop()</div></div>
+      <div style="flex:1;min-width:150px;background:#f5f6f8;border:1px dashed #d0d4da;border-radius:8px;padding:8px 10px;font-size:13px;"><b>BEEP_LOCKOUT</b><div style="color:#8a94a2;">已定义未接线（预留）</div></div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,54 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 88, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 5 章 · PS2 控制 ★</Text>
+      <Text style={{ fontSize: 32, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>parse_psx_buf：边沿检测（只在变化时发指令）</Text>
+    </Box>
+    {/* B 内容区：上掩码 SVG + 下注解 */}
+    <Box style={{ flex: 1, marginTop: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Box style={{ background: '#0F172A', borderRadius: 10, padding: '10px 14px' }}>
+        <svg width='1152' height='250' viewBox='0 0 1152 250' style={{ display: 'block' }}>
+          {/* 16 位示意，画 16 个小格 */}
+          {[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map((b)=>{
+            const x = 40 + b*68;
+            return (
+              <g key={b}>
+                <text x={x+24} y='24' fill='#64748B' fontSize='12' textAnchor='middle'>{`b${b}`}</text>
+                <rect x={x} y='34' width='50' height='34' rx='4' fill='#1E293B' stroke='#3B82F6' strokeWidth='1' />
+                <rect x={x} y='110' width='50' height='34' rx='4' fill='#1E293B' stroke='#06B6D4' strokeWidth='1' />
+                <rect x={x} y='186' width='50' height='34' rx='4' fill={b===3?'#FBBF24':'#334155'} stroke='#FBBF24' strokeWidth={b===3?2:1} />
+              </g>
+            );
+          })}
+          <text x='40' y='30' fill='#E2E8F0' fontSize='14' fontWeight='bold'>bak (上次)</text>
+          <text x='40' y='106' fill='#E2E8F0' fontSize='14' fontWeight='bold'>temp (本次)</text>
+          <text x='40' y='182' fill='#FBBF24' fontSize='14' fontWeight='bold'>press_mask = bak &amp; ~temp</text>
+          <text x='560' y='225' fill='#94A3B8' fontSize='13'>高亮位 b3：上次=1(松开) 本次=0(按下) → 刚按下，只这一位有 press 事件</text>
+        </svg>
+      </Box>
+      <Box style={{ display: 'flex', flexDirection: 'row', gap: 16 }}>
+        <Box style={{ flex: 1, background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5 }}>
+            <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>为什么边沿而非电平</span>：手柄给的是「现在被按着吗」的电平；我们要的是「这一瞬间刚按下/刚松开」的事件。两帧异或算出边沿。
+          </Text>
+        </Box>
+        <Box style={{ flex: 1, background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5 }}>
+            <span style={{ color: '#06B6D4', fontWeight: 'bold' }}>press_mask = bak &amp; ~temp</span>：上次松、本次按 → 刚按下；<span style={{ color: '#06B6D4' }}>release_mask = ~bak &amp; temp</span>：上次按、本次松 → 刚松开。
+          </Text>
+        </Box>
+      </Box>
+      <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '10px 16px' }}>
+        <Text style={{ fontSize: 15, color: '#E2E8F0', lineHeight: 1.5 }}>
+          遍历 16 位，只处理 press/release 掩码为 1 的键 → 每个动作只发一次指令；按住不放不会狂发，松手也只发一次停止。bak 用 static 跨调用保留上次状态。
+        </Text>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>37 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

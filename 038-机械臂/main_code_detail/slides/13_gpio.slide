@@ -1,0 +1,47 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 2 章 · 初始化 ④ ⑤</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>app_gpio_init 与 app_setup_start</Text>
+    </Box>
+    {/* B 内容区：左说明 + 右关键语义 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 560, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 19, color: '#E2E8F0', lineHeight: 1.7 }}>
+          <span style={{ color: '#FBBF24', fontWeight: 'bold' }}>④ app_gpio_init</span> 配置板载外设的 GPIO：<Box /><br />
+          • <span style={{ color: '#06B6D4' }}>LED</span> —— 推挽输出，用于状态指示<Box /><br />
+          • <span style={{ color: '#06B6D4' }}>蜂鸣器 BEEP</span> —— 推挽输出，按键反馈「滴」一声<Box /><br />
+          • <span style={{ color: '#06B6D4' }}>板载按键 KEY</span> —— 输入，配合 SysTick 里的 key_scan
+        </Text>
+        <Text style={{ fontSize: 18, color: '#E2E8F0', lineHeight: 1.7, marginTop: 18 }}>
+          <span style={{ color: '#FBBF24', fontWeight: 'bold' }}>⑤ app_setup_start</span> 做「开机自检」：让 LED 闪烁 3 次，约 1 秒后切到正常控制模式，避免上电瞬间误动作。
+        </Text>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.6 }}>
+            <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>为什么先初始化 GPIO 再初始化外设？</span><Box /><br />
+            后面 spi_flash / 舵机 / PS2 都会操作具体引脚，GPIO 时钟与模式必须先就位。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '14px 18px' }}>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.6 }}>
+            <span style={{ color: '#06B6D4', fontWeight: 'bold' }}>LED 闪烁的意义</span><Box /><br />
+            既是上电指示，也是「程序跑起来了」的肉眼自检；初始化若卡死，LED 不会按预期闪 3 下。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '14px 18px', borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 16, color: '#E2E8F0', lineHeight: 1.55 }}>
+            注意：spi_flash_init 会临时占用 PB13（与 LED 复用），它在自己内部用 spiFlashOn(0) 末尾把引脚恢复成 LED，故 LED 在 Flash 操作后才正常显示。
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>13 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

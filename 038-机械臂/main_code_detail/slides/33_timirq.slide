@@ -1,0 +1,53 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 88, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 5 章 · 波形输出</Text>
+      <Text style={{ fontSize: 32, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>TIM2_IRQHandler：一个定时器分时 8 路</Text>
+    </Box>
+    {/* B 内容区：上时序 SVG + 下注解 */}
+    <Box style={{ flex: 1, marginTop: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Box style={{ background: '#0F172A', borderRadius: 10, padding: '8px 12px' }}>
+        <svg width='1152' height='300' viewBox='0 0 1152 300' style={{ display: 'block' }}>
+          {/* 时隙条 */}
+          {[0,1,2,3,4,5,6,7].map((s)=>{
+            const x = 20 + s*140;
+            return (
+              <g key={s}>
+                <rect x={x} y='30' width='136' height='40' rx='4' fill='#1E293B' stroke='#3B82F6' strokeWidth='1.5' />
+                <text x={x+68} y='55' fill='#E2E8F0' fontSize='15' textAnchor='middle'>{`槽${s} 舵机${s}`}</text>
+                {/* 高脉冲段(cur) */}
+                <rect x={x} y='110' width={68} height='80' fill='#FBBF24' opacity='0.85' />
+                <text x={x+34} y='158' fill='#0B1120' fontSize='12' textAnchor='middle' fontWeight='bold'>cur</text>
+                {/* 低段补满 */}
+                <rect x={x+68} y='110' width={68} height='80' fill='#334155' />
+                <text x={x+102} y='158' fill='#94A3B8' fontSize='12' textAnchor='middle'>2.5-cur</text>
+                <text x={x+68} y='215' fill='#64748B' fontSize='12' textAnchor='middle'>2.5ms</text>
+              </g>
+            );
+          })}
+          <text x='20' y='250' fill='#06B6D4' fontSize='14'>每槽: flag0 拉高(ARR=cur) → flag1 拉低(ARR=2500-cur)，单舵机一拍=2500us 闭合</text>
+          <text x='740' y='250' fill='#FBBF24' fontSize='14'>8 槽 × 2.5ms = 20ms = 标准舵机周期</text>
+          <text x='20' y='285' fill='#94A3B8' fontSize='13'>上半拍高脉冲宽 = cur(us) 决定角度；下半拍补齐时隙；duoji_index 每拍 +1，到 DJ_NUM 回 0</text>
+        </svg>
+      </Box>
+      <Box style={{ display: 'flex', flexDirection: 'row', gap: 16 }}>
+        <Box style={{ flex: 1, background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5 }}>
+            <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>关键 trick</span>：ARR 不是 20ms 周期，而是「下一个半拍要数多久」。每 2.5ms 进中断只动一个舵机脚。
+          </Text>
+        </Box>
+        <Box style={{ flex: 1, background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5 }}>
+            <span style={{ color: '#06B6D4', fontWeight: 'bold' }}>平滑转动</span>：上半拍里调 <span style={{ color: '#06B6D4' }}>servo_inc_offset()</span> 把 cur 往 aim 挪一点，下次高脉冲就宽/窄一点 → 渐变。
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>33 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

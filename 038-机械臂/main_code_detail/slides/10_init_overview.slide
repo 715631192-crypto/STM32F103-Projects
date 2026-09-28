@@ -1,0 +1,48 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 2 章 · 初始化</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>初始化总览：十个步骤</Text>
+    </Box>
+    {/* B 内容区 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 24 }}>
+      <Box style={{ width: 360 }}>
+        <Text style={{ fontSize: 19, color: '#E2E8F0', lineHeight: 1.7 }}>
+          这十步是 main() 里 <span style={{ color: '#FBBF24', fontWeight: 'bold' }}>从上到下</span> 依次调用的。右边给出了「谁依赖谁」：<Box /><br /><br />
+          ① 释放调试脚是地基，后面的 GPIO / 定时器 / SPI 全部建立在其上；⑩ 手柄初始化放最后，保证时钟与外设都就绪。
+        </Text>
+        <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '12px 16px', marginTop: 16, borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 15, color: '#E2E8F0', lineHeight: 1.55 }}>
+            口诀：<span style={{ color: '#FBBF24' }}>脚→钟→时→脚→闪→口→机→定→柄</span>
+          </Text>
+        </Box>
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+        {[
+          ['①', 'SWJ_GPIO_Init', '释放 PA13/14/15、PB3/4 调试脚为普通 GPIO'],
+          ['②', 'rcc_Init', '系统时钟树，72MHz'],
+          ['③', 'SysTick_Init', '毫秒延时与计时基准'],
+          ['④', 'app_gpio_init', 'LED / 蜂鸣器 / 板载按键'],
+          ['⑤', 'app_setup_start', 'LED 闪 3 次，1s 后进正常模式'],
+          ['⑥', 'spi_flash_init', 'W25Q64 Flash（动作组/偏差）'],
+          ['⑦', 'app_usart_init', '串口1（上位机）+ 串口3（总线舵机）'],
+          ['⑧', 'servo_init', 'PWM 舵机中位 + 总线舵机回中'],
+          ['⑨', 'TIM2_init(20000,72)', '时基 1us/tick，20ms 周期'],
+          ['⑩', 'app_ps2_init', 'PS2 手柄 GPIO + 红灯模式序列'],
+        ].map((it) => (
+          <Box key={it[0]} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14, background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '9px 16px' }}>
+            <Text style={{ fontSize: 22, color: '#FBBF24', fontWeight: 'bold', width: 40 }}>{it[0]}</Text>
+            <Text style={{ fontSize: 18, color: '#E2E8F0', fontWeight: 'bold', width: 200 }}>{it[1]}</Text>
+            <Text style={{ fontSize: 15, color: '#94A3B8' }}>{it[2]}</Text>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>10 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

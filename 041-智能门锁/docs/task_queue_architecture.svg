@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 820" font-family="Microsoft YaHei, SimHei, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2C3E50"/>
+    </marker>
+    <marker id="arrowD" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#7F8C8D"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect x="0" y="0" width="1280" height="820" fill="#F5F7FA"/>
+
+  <!-- 标题 -->
+  <text x="640" y="42" text-anchor="middle" font-size="30" font-weight="bold" fill="#1F3A5F">智能门锁 · 任务 — 队列架构图</text>
+  <text x="640" y="72" text-anchor="middle" font-size="16" fill="#5D6D7E">5 个应用任务（分层）+ 6 个静态队列（FreeRTOS xQueueCreateStatic）· Cortex-M3 @72MHz</text>
+
+  <!-- ================= 任务节点 ================= -->
+  <!-- input_task 采集层 -->
+  <g>
+    <rect x="80" y="150" width="250" height="110" rx="10" fill="#E8F5EE" stroke="#2E8B57" stroke-width="2"/>
+    <rect x="80" y="150" width="250" height="34" rx="10" fill="#2E8B57"/>
+    <text x="205" y="173" text-anchor="middle" font-size="17" font-weight="bold" fill="#FFFFFF">input_task · 采集层</text>
+    <text x="96" y="208" font-size="13.5" fill="#1B2631">优先级 3 · 栈 256 字 · 10ms</text>
+    <text x="96" y="230" font-size="13.5" fill="#1B2631">键盘/刷卡/指纹/唤醒键采集</text>
+    <text x="96" y="250" font-size="13.5" fill="#1B2631">★ RC522 两级自愈寄生于此</text>
+  </g>
+
+  <!-- access_task 决策层 (中心) -->
+  <g>
+    <rect x="470" y="330" width="280" height="150" rx="12" fill="#FDEDEC" stroke="#C0392B" stroke-width="3"/>
+    <rect x="470" y="330" width="280" height="38" rx="12" fill="#C0392B"/>
+    <text x="610" y="356" text-anchor="middle" font-size="18" font-weight="bold" fill="#FFFFFF">access_task · 决策层</text>
+    <text x="486" y="392" font-size="13.5" fill="#1B2631">优先级 4（最高）· 栈 384 字 · ~100ms</text>
+    <text x="486" y="414" font-size="13.5" fill="#1B2631">唯一仲裁：校验 PIN/指纹/卡/远程</text>
+    <text x="486" y="436" font-size="13.5" fill="#1B2631">消费 input+remote → 生产 log+notify+ui</text>
+    <text x="486" y="458" font-size="13.5" fill="#1B2631">管理菜单 / 自动上锁倒计时</text>
+  </g>
+
+  <!-- network_task 通信层 -->
+  <g>
+    <rect x="80" y="560" width="250" height="110" rx="10" fill="#EAF2F8" stroke="#2980B9" stroke-width="2"/>
+    <rect x="80" y="560" width="250" height="34" rx="10" fill="#2980B9"/>
+    <text x="205" y="583" text-anchor="middle" font-size="17" font-weight="bold" fill="#FFFFFF">network_task · 通信层</text>
+    <text x="96" y="618" font-size="13.5" fill="#1B2631">优先级 2 · 栈 768 字（最大）· 50ms</text>
+    <text x="96" y="640" font-size="13.5" fill="#1B2631">ESP8266 AT/MQTT 唯一通道</text>
+    <text x="96" y="660" font-size="13.5" fill="#1B2631">收云端命令 / 上报状态</text>
+  </g>
+
+  <!-- log_task 持久层 -->
+  <g>
+    <rect x="950" y="150" width="250" height="110" rx="10" fill="#F5EEF8" stroke="#8E44AD" stroke-width="2"/>
+    <rect x="950" y="150" width="250" height="34" rx="10" fill="#8E44AD"/>
+    <text x="1075" y="173" text-anchor="middle" font-size="17" font-weight="bold" fill="#FFFFFF">log_task · 持久层</text>
+    <text x="966" y="208" font-size="13.5" fill="#1B2631">优先级 1 · 栈 256 字 · 50ms</text>
+    <text x="966" y="230" font-size="13.5" fill="#1B2631">事件落盘 W25Q64</text>
+    <text x="966" y="250" font-size="13.5" fill="#1B2631">CRC32 环形缓冲</text>
+  </g>
+
+  <!-- ui_task 呈现层 -->
+  <g>
+    <rect x="950" y="560" width="250" height="110" rx="10" fill="#E6F6F2" stroke="#16A085" stroke-width="2"/>
+    <rect x="950" y="560" width="250" height="34" rx="10" fill="#16A085"/>
+    <text x="1075" y="583" text-anchor="middle" font-size="17" font-weight="bold" fill="#FFFFFF">ui_task · 呈现层</text>
+    <text x="966" y="618" font-size="13.5" fill="#1B2631">优先级 1 · 栈 160 字（最小）</text>
+    <text x="966" y="640" font-size="13.5" fill="#1B2631">OLED 唯一写者（portMAX_DELAY）</text>
+    <text x="966" y="660" font-size="13.5" fill="#1B2631">收 ui_queue 渲染屏幕</text>
+  </g>
+
+  <!-- ================= 队列（生产→消费） ================= -->
+  <!-- input_queue -->
+  <line x1="330" y1="205" x2="405" y2="345" stroke="#2C3E50" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="455" y1="370" x2="470" y2="380" stroke="#2C3E50" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="380" y="305" width="170" height="40" rx="8" fill="#34495E"/>
+  <text x="465" y="330" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#FFFFFF">input_queue (12)</text>
+
+  <!-- remote_queue -->
+  <line x1="330" y1="610" x2="405" y2="455" stroke="#2C3E50" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="455" y1="440" x2="470" y2="430" stroke="#2C3E50" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="380" y="470" width="170" height="40" rx="8" fill="#34495E"/>
+  <text x="465" y="495" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#FFFFFF">remote_queue (4)</text>
+
+  <!-- log_queue -->
+  <line x1="750" y1="380" x2="935" y2="205" stroke="#2C3E50" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="955" y1="195" x2="950" y2="190" stroke="#2C3E50" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="820" y="285" width="160" height="40" rx="8" fill="#34495E"/>
+  <text x="900" y="310" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#FFFFFF">log_queue (8)</text>
+
+  <!-- ui_queue -->
+  <line x1="750" y1="420" x2="935" y2="610" stroke="#2C3E50" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="955" y1="620" x2="950" y2="625" stroke="#2C3E50" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="820" y="505" width="150" height="40" rx="8" fill="#34495E"/>
+  <text x="895" y="530" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#FFFFFF">ui_queue (6)</text>
+
+  <!-- notify_queue (反馈, 虚线) access -> network -->
+  <path d="M610,480 C520,640 380,660 330,615" fill="none" stroke="#7F8C8D" stroke-width="2.5" stroke-dasharray="8 6" marker-end="url(#arrowD)"/>
+  <rect x="430" y="600" width="180" height="36" rx="8" fill="#BDC3C7"/>
+  <text x="520" y="623" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631">notify_queue (8)</text>
+
+  <!-- log_request_queue (请求, 虚线) access -> log -->
+  <path d="M740,350 C840,270 900,240 945,205" fill="none" stroke="#7F8C8D" stroke-width="2.5" stroke-dasharray="8 6" marker-end="url(#arrowD)"/>
+  <rect x="800" y="232" width="190" height="36" rx="8" fill="#BDC3C7"/>
+  <text x="895" y="255" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631">log_request_queue (4)</text>
+
+  <!-- 图例 -->
+  <rect x="80" y="710" width="1120" height="64" rx="10" fill="#FFFFFF" stroke="#BFC9CA" stroke-width="1.5"/>
+  <line x1="100" y1="735" x2="140" y2="735" stroke="#2C3E50" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="150" y="740" font-size="13.5" fill="#1B2631">实线 = 主数据流（生产者 → 消费者，按值拷贝、线程安全）</text>
+  <line x1="100" y1="760" x2="140" y2="760" stroke="#7F8C8D" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#arrowD)"/>
+  <text x="150" y="765" font-size="13.5" fill="#1B2631">虚线 = 反馈/请求（notify 上报云端、log_request 菜单查记录）</text>
+  <text x="640" y="740" font-size="13.5" fill="#C0392B" font-weight="bold">access_task 是唯一决策中心：所有开锁判定只在此发生</text>
+  <text x="640" y="765" font-size="13.5" fill="#5D6D7E">运行时共 6 个 RTOS 任务（5 应用 + 1 idle）；无独立"自愈任务"</text>
+</svg>

@@ -1,0 +1,14 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 80px', overflow: 'hidden' }}>
+    <Box style={{ position: 'absolute', right: 60, top: 80, fontSize: 280, fontWeight: 'bold', color: 'rgba(59,130,246,0.12)', lineHeight: 1 }}>05</Box>
+    <Text style={{ fontSize: 16, color: '#06B6D4', letterSpacing: 6, fontWeight: 'bold', position: 'relative' }}>CHAPTER 05</Text>
+    <Text style={{ fontSize: 72, color: '#E2E8F0', fontWeight: 'bold', marginTop: 16, position: 'relative' }}>
+      波形输出与 PS2 控制
+    </Text>
+    <Box style={{ width: 120, height: 4, background: 'linear-gradient(135deg,#3B82F6,#06B6D4)', marginTop: 24, position: 'relative' }} />
+    <Text style={{ fontSize: 22, color: '#94A3B8', marginTop: 26, lineHeight: 1.6, position: 'relative' }}>
+      最后深入「最底层」：一个定时器怎么驱动 6 路舵机，<Box /><br />
+      以及 PS2 手柄如何用边沿检测「伪装」成串口指令注入。
+    </Text>
+  </Box>
+</Slide>

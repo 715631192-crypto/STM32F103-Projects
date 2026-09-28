@@ -1,0 +1,55 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 3 章 · 主循环</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>while(1) 五任务轮询</Text>
+    </Box>
+    {/* B 内容区：左代码 + 右任务卡 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 420 }}>
+        <CodeBlock
+          code={`int main(void)
+{
+    /* ... 十步初始化 ... */
+    while (1)
+    {
+        app_led_run();     // LED 闪烁
+        app_key_run();     // 板载按键
+        app_usart_run();   // ★ 串口指令分发
+        loop_action();     // ★ 动作组循环
+        app_ps2_run();     // ★ PS2 读取注入
+    }
+}`}
+          language='c'
+          width={420}
+          fontSize={14}
+        />
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+        {[
+          { t: 'app_led_run', d: 'LED 状态闪烁指示，纯视觉反馈' },
+          { t: 'app_key_run', d: '处理板载按键（SysTick 已扫值）' },
+          { t: 'app_usart_run ★', d: '检测到 uart1_get_ok=1 就按 mode 分发解析（核心）' },
+          { t: 'loop_action ★', d: '动作组循环执行器，$DGT 多次播放在此推进' },
+          { t: 'app_ps2_run ★', d: '每 50ms 读手柄→边沿检测→伪装串口注入' },
+        ].map((it) => (
+          <Box key={it.t} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16, background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '12px 18px' }}>
+            <Text style={{ fontSize: 19, color: it.t.indexOf('★') >= 0 ? '#FBBF24' : '#E2E8F0', fontWeight: 'bold', width: 180 }}>{it.t}</Text>
+            <Text style={{ fontSize: 16, color: '#94A3B8' }}>{it.d}</Text>
+          </Box>
+        ))}
+        <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '12px 16px', borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 15, color: '#E2E8F0', lineHeight: 1.5 }}>
+            三个 ★ 是「指令真正产生动作」的地方；其余两个是低优先级状态维护。
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>20 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

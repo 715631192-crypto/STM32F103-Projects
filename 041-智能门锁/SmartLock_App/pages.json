@@ -1,0 +1,88 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "智能门锁",
+        "navigationBarBackgroundColor": "#1976d2",
+        "navigationBarTextStyle": "white",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/unlock/unlock",
+      "style": {
+        "navigationBarTitleText": "远程开锁",
+        "navigationBarBackgroundColor": "#1976d2",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/tempPwd/tempPwd",
+      "style": {
+        "navigationBarTitleText": "临时密码",
+        "navigationBarBackgroundColor": "#1976d2",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/logs/logs",
+      "style": {
+        "navigationBarTitleText": "开锁日志",
+        "navigationBarBackgroundColor": "#1976d2",
+        "navigationBarTextStyle": "white",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/config/config",
+      "style": {
+        "navigationBarTitleText": "设备配置",
+        "navigationBarBackgroundColor": "#0d47a1",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "智能门锁管家",
+    "navigationBarBackgroundColor": "#1976d2",
+    "backgroundColor": "#f5f5f5"
+  },
+  "tabBar": {
+    "color": "#888888",
+    "selectedColor": "#1976d2",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/icons/home.png",
+        "selectedIconPath": "static/icons/home_s.png"
+      },
+      {
+        "pagePath": "pages/unlock/unlock",
+        "text": "开锁",
+        "iconPath": "static/icons/unlock.png",
+        "selectedIconPath": "static/icons/unlock_s.png"
+      },
+      {
+        "pagePath": "pages/tempPwd/tempPwd",
+        "text": "临时密码",
+        "iconPath": "static/icons/pwd.png",
+        "selectedIconPath": "static/icons/pwd_s.png"
+      },
+      {
+        "pagePath": "pages/logs/logs",
+        "text": "日志",
+        "iconPath": "static/icons/log.png",
+        "selectedIconPath": "static/icons/log_s.png"
+      }
+    ]
+  },
+  "easycom": {
+    "autoscan": true,
+    "custom": {}
+  }
+}

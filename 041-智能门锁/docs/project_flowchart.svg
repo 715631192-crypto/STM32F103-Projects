@@ -1,0 +1,331 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 2080" font-family="Microsoft YaHei, SimHei, sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2C3E50"/>
+    </marker>
+    <marker id="arw" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#7F8C8D"/>
+    </marker>
+    <marker id="arg" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#27AE60"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="2080" fill="#F5F7FA"/>
+  <text x="700" y="46" text-anchor="middle" font-size="30" font-weight="bold" fill="#1F3A5F">STM32 智能门锁 · 项目系统流程图</text>
+  <text x="700" y="76" text-anchor="middle" font-size="15" fill="#5D6D7E">上电启动 → 任务并发 → 输入采集 → 认证决策 → 执行记录 → 异常自愈（详细版）</text>
+
+  <!-- ============ ① 上电启动 ============ -->
+  <rect x="0" y="100" width="1400" height="30" fill="#2980B9"/>
+  <text x="20" y="122" font-size="16" font-weight="bold" fill="#FFFFFF">① 上电启动（main → board_init 9 步 → 建队列/任务 → 启动调度器）</text>
+
+  <g font-size="12.5" text-anchor="middle">
+    <rect x="40" y="152" width="150" height="62" rx="8" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.6"/>
+    <text x="115" y="180" fill="#1B2631">上电复位</text>
+    <text x="115" y="199" fill="#1B2631" font-size="11.5">SystemInit 72MHz</text>
+
+    <rect x="205" y="152" width="110" height="62" rx="8" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.6"/>
+    <text x="260" y="189" fill="#1B2631">main()</text>
+
+    <rect x="330" y="152" width="175" height="62" rx="8" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.6"/>
+    <text x="417" y="180" fill="#1B2631">smart_lock_app_start()</text>
+    <text x="417" y="199" fill="#1B2631" font-size="11.5">初始化 + 建对象</text>
+
+    <rect x="520" y="152" width="155" height="62" rx="8" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.6"/>
+    <text x="597" y="180" fill="#1B2631">board_init()</text>
+    <text x="597" y="199" fill="#1B2631" font-size="11.5">9 步外设初始化</text>
+
+    <rect x="690" y="152" width="165" height="62" rx="8" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.6"/>
+    <text x="772" y="180" fill="#1B2631">创建 6 个静态队列</text>
+    <text x="772" y="199" fill="#1B2631" font-size="11.5">xQueueCreateStatic</text>
+
+    <rect x="870" y="152" width="165" height="62" rx="8" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.6"/>
+    <text x="952" y="180" fill="#1B2631">创建 5 个静态任务</text>
+    <text x="952" y="199" fill="#1B2631" font-size="11.5">xTaskCreateStatic</text>
+
+    <rect x="1050" y="152" width="175" height="62" rx="8" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.6"/>
+    <text x="1137" y="180" fill="#1B2631">vTaskStartScheduler()</text>
+    <text x="1137" y="199" fill="#1B2631" font-size="11.5">内核接管</text>
+
+    <rect x="1240" y="152" width="140" height="62" rx="8" fill="#D6EAF8" stroke="#2980B9" stroke-width="2"/>
+    <text x="1310" y="180" fill="#1B2631" font-weight="bold">5 任务并发运行</text>
+    <text x="1310" y="199" fill="#1B2631" font-size="11.5">+ idle 任务</text>
+  </g>
+  <g stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)">
+    <line x1="190" y1="183" x2="203" y2="183"/>
+    <line x1="315" y1="183" x2="328" y2="183"/>
+    <line x1="505" y1="183" x2="518" y2="183"/>
+    <line x1="675" y1="183" x2="688" y2="183"/>
+    <line x1="855" y1="183" x2="868" y2="183"/>
+    <line x1="1035" y1="183" x2="1048" y2="183"/>
+    <line x1="1225" y1="183" x2="1238" y2="183"/>
+  </g>
+
+  <rect x="40" y="230" width="1320" height="52" rx="6" fill="#FFFFFF" stroke="#AED6F1" stroke-width="1.2"/>
+  <text x="56" y="250" font-size="12.5" fill="#1B2631">board_init 9 步：① 时钟+中断分组（释放 PA15/PB3/PB4）　② 三路串口（ESP8266 / 指纹 / 调试）　③ I2C+OLED+蜂鸣+RGB</text>
+  <text x="56" y="272" font-size="12.5" fill="#1B2631">　　　　　　　④ W25Q64 存储　⑤ RC522（Check 失败则二次 Init）　⑥ DS3231 时钟　⑦ 舵机上电回锁　⑧ 键盘+卡表加载　⑨ 联网+看门狗</text>
+
+  <!-- ============ ② 任务并发 ============ -->
+  <rect x="0" y="296" width="1400" height="30" fill="#2E8B57"/>
+  <text x="20" y="318" font-size="16" font-weight="bold" fill="#FFFFFF">② 任务并发与队列数据流（FreeRTOS 抢占调度，access_task 为唯一决策中心）</text>
+
+  <g font-size="12.5" text-anchor="middle">
+    <rect x="60" y="352" width="220" height="80" rx="9" fill="#E8F5EE" stroke="#2E8B57" stroke-width="1.8"/>
+    <text x="170" y="378" font-size="14" font-weight="bold" fill="#1B2631">input_task</text>
+    <text x="170" y="398" fill="#1B2631" font-size="11.5">采集层 · 优先级 3 · 10ms</text>
+    <text x="170" y="416" fill="#1B2631" font-size="11.5">键盘 / 刷卡 / 指纹 / 唤醒</text>
+
+    <rect x="540" y="342" width="260" height="100" rx="10" fill="#FDEDEC" stroke="#C0392B" stroke-width="2.4"/>
+    <text x="670" y="370" font-size="15" font-weight="bold" fill="#1B2631">access_task</text>
+    <text x="670" y="391" fill="#1B2631" font-size="11.5">决策层 · 优先级 4（最高）</text>
+    <text x="670" y="409" fill="#1B2631" font-size="11.5">唯一仲裁：凭据校验 + 状态机</text>
+    <text x="670" y="427" fill="#1B2631" font-size="11.5">管理菜单 / 自动落锁</text>
+
+    <rect x="1060" y="352" width="220" height="80" rx="9" fill="#F5EEF8" stroke="#8E44AD" stroke-width="1.8"/>
+    <text x="1170" y="378" font-size="14" font-weight="bold" fill="#1B2631">log_task</text>
+    <text x="1170" y="398" fill="#1B2631" font-size="11.5">持久层 · 优先级 1 · 50ms</text>
+    <text x="1170" y="416" fill="#1B2631" font-size="11.5">事件落盘 W25Q64</text>
+
+    <rect x="60" y="466" width="220" height="80" rx="9" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.8"/>
+    <text x="170" y="492" font-size="14" font-weight="bold" fill="#1B2631">network_task</text>
+    <text x="170" y="512" fill="#1B2631" font-size="11.5">通信层 · 优先级 2 · 50ms</text>
+    <text x="170" y="530" fill="#1B2631" font-size="11.5">ESP8266 MQTT 收发</text>
+
+    <rect x="1060" y="466" width="220" height="80" rx="9" fill="#E6F6F2" stroke="#16A085" stroke-width="1.8"/>
+    <text x="1170" y="492" font-size="14" font-weight="bold" fill="#1B2631">ui_task</text>
+    <text x="1170" y="512" fill="#1B2631" font-size="11.5">呈现层 · 优先级 1</text>
+    <text x="1170" y="530" fill="#1B2631" font-size="11.5">OLED 显示（阻塞等队列）</text>
+  </g>
+
+  <!-- 队列连线 -->
+  <g stroke="#2C3E50" stroke-width="2.2" marker-end="url(#ar)">
+    <line x1="280" y1="380" x2="536" y2="385"/>
+    <line x1="280" y1="500" x2="536" y2="415"/>
+    <line x1="800" y1="372" x2="1056" y2="378"/>
+    <line x1="800" y1="400" x2="1056" y2="500"/>
+    <line x1="800" y1="415" x2="1056" y2="408"/>
+  </g>
+  <path d="M556,432 C420,500 260,540 168,548" fill="none" stroke="#7F8C8D" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#arw)"/>
+
+  <g font-size="11.5" fill="#34495E">
+    <rect x="330" y="352" width="180" height="22" rx="4" fill="#34495E"/>
+    <text x="420" y="368" text-anchor="middle" fill="#FFFFFF">input_queue (12)</text>
+
+    <rect x="330" y="498" width="180" height="22" rx="4" fill="#34495E"/>
+    <text x="420" y="514" text-anchor="middle" fill="#FFFFFF">remote_queue (4)</text>
+
+    <rect x="830" y="352" width="180" height="22" rx="4" fill="#34495E"/>
+    <text x="920" y="368" text-anchor="middle" fill="#FFFFFF">log_queue (8)</text>
+
+    <rect x="830" y="424" width="180" height="22" rx="4" fill="#BDC3C7"/>
+    <text x="920" y="440" text-anchor="middle" fill="#1B2631">log_request_queue (4)</text>
+
+    <rect x="830" y="466" width="150" height="22" rx="4" fill="#34495E"/>
+    <text x="905" y="482" text-anchor="middle" fill="#FFFFFF">ui_queue (6)</text>
+
+    <rect x="290" y="528" width="180" height="22" rx="4" fill="#BDC3C7"/>
+    <text x="380" y="544" text-anchor="middle" fill="#1B2631">notify_queue (8)</text>
+  </g>
+  <text x="700" y="580" text-anchor="middle" font-size="12" fill="#5D6D7E">
+    实线 = 主数据流（生产者 → 消费者，值拷贝、线程安全）　　虚线 = 反馈 / 请求
+  </text>
+
+  <!-- ============ ③ 输入采集 ============ -->
+  <rect x="0" y="600" width="1400" height="30" fill="#16A085"/>
+  <text x="20" y="622" font-size="16" font-weight="bold" fill="#FFFFFF">③ 输入采集 → 统一事件模型</text>
+
+  <g font-size="12.5" text-anchor="middle">
+    <rect x="60" y="654" width="180" height="62" rx="8" fill="#E6F6F2" stroke="#16A085" stroke-width="1.6"/>
+    <text x="150" y="680" fill="#1B2631">键盘 4×4</text>
+    <text x="150" y="700" fill="#1B2631" font-size="11.5">数字 / # / A B C D</text>
+
+    <rect x="270" y="654" width="180" height="62" rx="8" fill="#E6F6F2" stroke="#16A085" stroke-width="1.6"/>
+    <text x="360" y="680" fill="#1B2631">RC522 刷卡</text>
+    <text x="360" y="700" fill="#1B2631" font-size="11.5">单轮重试 3 次 + HALT</text>
+
+    <rect x="480" y="654" width="180" height="62" rx="8" fill="#E6F6F2" stroke="#16A085" stroke-width="1.6"/>
+    <text x="570" y="680" fill="#1B2631">AS608 指纹</text>
+    <text x="570" y="700" fill="#1B2631" font-size="11.5">页 1~47 / 48 管理员</text>
+
+    <rect x="690" y="654" width="180" height="62" rx="8" fill="#E6F6F2" stroke="#16A085" stroke-width="1.6"/>
+    <text x="780" y="680" fill="#1B2631">PA8 唤醒键</text>
+    <text x="780" y="700" fill="#1B2631" font-size="11.5">EXTI 只置标志</text>
+
+    <rect x="960" y="654" width="200" height="62" rx="8" fill="#E6F6F2" stroke="#16A085" stroke-width="1.6"/>
+    <text x="1060" y="680" fill="#1B2631">远程命令（云端）</text>
+    <text x="1060" y="700" fill="#1B2631" font-size="11.5">network_task 解析</text>
+  </g>
+  <g stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)">
+    <path d="M150,716 L150,742 L620,742 L620,762" fill="none"/>
+    <path d="M360,716 L360,742 L640,742 L640,762" fill="none"/>
+    <path d="M570,716 L570,742 L660,742 L660,762" fill="none"/>
+    <path d="M780,716 L780,742 L680,742 L680,762" fill="none"/>
+  </g>
+
+  <rect x="540" y="766" width="300" height="56" rx="8" fill="#D6EAF8" stroke="#2980B9" stroke-width="1.8"/>
+  <text x="690" y="788" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B2631">board_poll_input()</text>
+  <text x="690" y="808" text-anchor="middle" font-size="11.5" fill="#1B2631">统一产出 board_input_event_t</text>
+
+  <!-- ============ ④ 认证决策 ============ -->
+  <rect x="0" y="856" width="1400" height="30" fill="#C0392B"/>
+  <text x="20" y="878" font-size="16" font-weight="bold" fill="#FFFFFF">④ 认证决策（access_task 唯一仲裁 · 顺序即安全优先级）</text>
+
+  <rect x="520" y="906" width="300" height="50" rx="8" fill="#FDEDEC" stroke="#C0392B" stroke-width="1.8"/>
+  <text x="670" y="926" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631">xQueueReceive(input_queue)</text>
+  <text x="670" y="945" text-anchor="middle" font-size="11.5" fill="#1B2631">handle_board_input() 进入 switch</text>
+  <line x1="670" y1="956" x2="670" y2="982" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+
+  <!-- 判定 1 -->
+  <polygon points="670,982 790,1022 670,1062 550,1022" fill="#FEF5E7" stroke="#CB8E00" stroke-width="1.8"/>
+  <text x="670" y="1018" text-anchor="middle" font-size="12.5" fill="#1B2631">键盘锁定中？</text>
+  <text x="670" y="1036" text-anchor="middle" font-size="11.5" fill="#1B2631">keypad_is_locked</text>
+  <line x1="790" y1="1022" x2="880" y2="1022" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="800" y="1012" font-size="11.5" fill="#C0392B">是</text>
+  <rect x="884" y="998" width="180" height="48" rx="7" fill="#FADBD8" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="974" y="1018" text-anchor="middle" font-size="12" fill="#1B2631">deny_access()</text>
+  <text x="974" y="1037" text-anchor="middle" font-size="11" fill="#1B2631">拒绝 + 提示稍后再试</text>
+  <line x1="670" y1="1062" x2="670" y2="1088" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="678" y="1080" font-size="11.5" fill="#27AE60">否</text>
+
+  <!-- 判定 2 -->
+  <polygon points="670,1088 800,1128 670,1168 540,1128" fill="#FEF5E7" stroke="#CB8E00" stroke-width="1.8"/>
+  <text x="670" y="1124" text-anchor="middle" font-size="12.5" fill="#1B2631">胁迫码 / 胁迫指纹？</text>
+  <text x="670" y="1142" text-anchor="middle" font-size="11.5" fill="#1B2631">duress PIN / 页 49</text>
+  <line x1="800" y1="1128" x2="880" y2="1128" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="806" y="1118" font-size="11.5" fill="#C0392B">是</text>
+  <rect x="884" y="1104" width="180" height="48" rx="7" fill="#FDEBD0" stroke="#CB8E00" stroke-width="1.5"/>
+  <text x="974" y="1124" text-anchor="middle" font-size="12" fill="#1B2631">grant_duress()</text>
+  <text x="974" y="1143" text-anchor="middle" font-size="11" fill="#1B2631">静默开门 + 后台告警</text>
+  <line x1="670" y1="1168" x2="670" y2="1194" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="678" y="1186" font-size="11.5" fill="#27AE60">否</text>
+
+  <!-- 判定 3 -->
+  <polygon points="670,1194 810,1236 670,1278 530,1236" fill="#FEF5E7" stroke="#CB8E00" stroke-width="1.8"/>
+  <text x="670" y="1230" text-anchor="middle" font-size="12.5" fill="#1B2631">凭据是否匹配？</text>
+  <text x="670" y="1248" text-anchor="middle" font-size="11" fill="#1B2631">PIN(HMAC 标签) / TOTP / 指纹 / 卡</text>
+  <text x="670" y="1264" text-anchor="middle" font-size="11" fill="#1B2631">/ 访客码 / 周期口令（常数时间比较）</text>
+
+  <line x1="810" y1="1236" x2="880" y2="1236" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="820" y="1226" font-size="11.5" fill="#C0392B">否</text>
+  <rect x="884" y="1212" width="180" height="44" rx="7" fill="#FADBD8" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="974" y="1240" text-anchor="middle" font-size="12" fill="#1B2631">失败计数 + 1</text>
+  <line x1="974" y1="1256" x2="974" y2="1282" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <polygon points="974,1282 1064,1306 974,1330 884,1306" fill="#FEF5E7" stroke="#CB8E00" stroke-width="1.6"/>
+  <text x="974" y="1302" text-anchor="middle" font-size="12" fill="#1B2631">≥ 3 次？</text>
+  <text x="974" y="1319" text-anchor="middle" font-size="11" fill="#1B2631">max failures</text>
+  <line x1="1064" y1="1306" x2="1120" y2="1306" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <rect x="1124" y="1284" width="180" height="44" rx="7" fill="#FADBD8" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="1214" y="1312" text-anchor="middle" font-size="12" fill="#1B2631">锁定 60s（LOCKOUT）</text>
+  <path d="M974,1330 L974,1352 L1120,1352" fill="none" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="984" y="1348" font-size="11.5" fill="#C0392B">否</text>
+  <rect x="1124" y="1330" width="180" height="44" rx="7" fill="#FADBD8" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="1214" y="1358" text-anchor="middle" font-size="12" fill="#1B2631">deny_access()</text>
+
+  <line x1="670" y1="1278" x2="670" y2="1330" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="678" y="1310" font-size="11.5" fill="#27AE60">是</text>
+
+  <!-- 判定 4 双因子 -->
+  <polygon points="670,1330 800,1370 670,1410 540,1370" fill="#FEF5E7" stroke="#CB8E00" stroke-width="1.8"/>
+  <text x="670" y="1366" text-anchor="middle" font-size="12.5" fill="#1B2631">双因子模式已开启？</text>
+  <text x="670" y="1384" text-anchor="middle" font-size="11.5" fill="#1B2631">FINGERPRINT_PIN / RFID_PIN</text>
+  <line x1="800" y1="1370" x2="806" y2="1396" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="806" y="1360" font-size="11.5" fill="#C0392B">是</text>
+  <polygon points="900,1370 990,1400 900,1430 810,1400" fill="#FEF5E7" stroke="#CB8E00" stroke-width="1.6"/>
+  <text x="900" y="1396" text-anchor="middle" font-size="11.5" fill="#1B2631">第一因子</text>
+  <text x="900" y="1412" text-anchor="middle" font-size="11.5" fill="#1B2631">已备？</text>
+  <line x1="990" y1="1400" x2="1050" y2="1400" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="1000" y="1390" font-size="11" fill="#C0392B">否</text>
+  <rect x="1054" y="1378" width="240" height="44" rx="7" fill="#FADBD8" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="1174" y="1406" text-anchor="middle" font-size="11.5" fill="#1B2631">deny：提示先用第一因子</text>
+  <line x1="900" y1="1430" x2="900" y2="1456" stroke="#27AE60" stroke-width="2" marker-end="url(#arg)"/>
+  <text x="908" y="1448" font-size="11" fill="#27AE60">是</text>
+
+  <line x1="670" y1="1410" x2="670" y2="1470" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="678" y="1450" font-size="11.5" fill="#27AE60">否（单因子）</text>
+  <line x1="900" y1="1456" x2="900" y2="1490" stroke="#27AE60" stroke-width="2"/>
+  <line x1="900" y1="1490" x2="700" y2="1490" stroke="#27AE60" stroke-width="2" marker-end="url(#arg)"/>
+
+  <rect x="540" y="1470" width="260" height="52" rx="8" fill="#D5F5E3" stroke="#27AE60" stroke-width="2"/>
+  <text x="670" y="1492" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B5E20">grant_access()</text>
+  <text x="670" y="1512" text-anchor="middle" font-size="11.5" fill="#1B5E20">开锁成功</text>
+
+  <line x1="670" y1="1522" x2="670" y2="1548" stroke="#2C3E50" stroke-width="2" marker-end="url(#ar)"/>
+  <rect x="480" y="1552" width="380" height="56" rx="8" fill="#FDEDEC" stroke="#C0392B" stroke-width="2"/>
+  <text x="670" y="1574" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B2631">lock_controller_handle()</text>
+  <text x="670" y="1594" text-anchor="middle" font-size="11.5" fill="#1B2631">4 态状态机：LOCKED / UNLOCKED / LOCKOUT / ALARM</text>
+
+  <!-- ============ ⑤ 执行与记录 ============ -->
+  <rect x="0" y="1640" width="1400" height="30" fill="#8E44AD"/>
+  <text x="20" y="1662" font-size="16" font-weight="bold" fill="#FFFFFF">⑤ 执行与记录（三路并行：物理 / 界面 / 审计，全部异步不阻塞决策）</text>
+
+  <g font-size="12.5" text-anchor="middle">
+    <rect x="60" y="1694" width="230" height="70" rx="8" fill="#F5EEF8" stroke="#8E44AD" stroke-width="1.6"/>
+    <text x="175" y="1720" font-size="13" font-weight="bold" fill="#1B2631">① 物理执行</text>
+    <text x="175" y="1740" font-size="11.5" fill="#1B2631">舵机转 90° 解锁</text>
+    <text x="175" y="1757" font-size="11.5" fill="#1B2631">蜂鸣 + 绿灯 / 红灯</text>
+
+    <rect x="320" y="1694" width="230" height="70" rx="8" fill="#F5EEF8" stroke="#8E44AD" stroke-width="1.6"/>
+    <text x="435" y="1720" font-size="13" font-weight="bold" fill="#1B2631">② 界面反馈</text>
+    <text x="435" y="1740" font-size="11.5" fill="#1B2631">queue_ui → ui_queue</text>
+    <text x="435" y="1757" font-size="11.5" fill="#1B2631">OLED 显示结果</text>
+
+    <rect x="580" y="1694" width="230" height="70" rx="8" fill="#F5EEF8" stroke="#8E44AD" stroke-width="1.6"/>
+    <text x="695" y="1720" font-size="13" font-weight="bold" fill="#1B2631">③ 审计记录</text>
+    <text x="695" y="1740" font-size="11.5" fill="#1B2631">queue_audit → log_queue</text>
+    <text x="695" y="1757" font-size="11.5" fill="#1B2631">写 W25Q64（CRC32）</text>
+
+    <rect x="840" y="1694" width="240" height="70" rx="8" fill="#F5EEF8" stroke="#8E44AD" stroke-width="1.6"/>
+    <text x="960" y="1720" font-size="13" font-weight="bold" fill="#1B2631">④ 云端上报</text>
+    <text x="960" y="1740" font-size="11.5" fill="#1B2631">notify_queue → network</text>
+    <text x="960" y="1757" font-size="11.5" fill="#1B2631">MQTT 物模型</text>
+
+    <rect x="1110" y="1694" width="250" height="70" rx="8" fill="#EAF2F8" stroke="#2980B9" stroke-width="1.6"/>
+    <text x="1235" y="1720" font-size="13" font-weight="bold" fill="#1B2631">⑤ 自动落锁</text>
+    <text x="1235" y="1740" font-size="11.5" fill="#1B2631">门磁关闭 → 立即落锁</text>
+    <text x="1235" y="1757" font-size="11.5" fill="#1B2631">超时 / TICK → 兜底落锁</text>
+  </g>
+  <line x1="670" y1="1608" x2="670" y2="1630" stroke="#2C3E50" stroke-width="2"/>
+  <g stroke="#8E44AD" stroke-width="2" marker-end="url(#ar)">
+    <path d="M670,1630 L670,1650 L175,1650 L175,1690" fill="none"/>
+    <path d="M670,1630 L670,1650 L435,1650 L435,1690" fill="none"/>
+    <path d="M670,1630 L670,1650 L695,1650 L695,1690" fill="none"/>
+    <path d="M670,1630 L670,1650 L960,1650 L960,1690" fill="none"/>
+    <path d="M670,1630 L670,1650 L1235,1650 L1235,1690" fill="none"/>
+  </g>
+
+  <!-- ============ ⑥ 异常与自愈 ============ -->
+  <rect x="0" y="1800" width="1400" height="30" fill="#CB8E00"/>
+  <text x="20" y="1822" font-size="16" font-weight="bold" fill="#FFFFFF">⑥ 异常处理与自愈（贯穿全流程的可靠性兜底）</text>
+
+  <g font-size="12.5" text-anchor="middle">
+    <rect x="60" y="1854" width="290" height="86" rx="8" fill="#FEF9E7" stroke="#CB8E00" stroke-width="1.6"/>
+    <text x="205" y="1878" font-size="13" font-weight="bold" fill="#1B2631">RC522 两级自愈</text>
+    <text x="205" y="1898" font-size="11.5" fill="#1B2631">回读配置寄存器判丢失 →</text>
+    <text x="205" y="1916" font-size="11.5" fill="#1B2631">整片 Init；每 30s 无条件刷新</text>
+    <text x="205" y="1933" font-size="11.5" fill="#C0392B">★ 不用 VersionReg 判健康</text>
+
+    <rect x="375" y="1854" width="290" height="86" rx="8" fill="#FEF9E7" stroke="#CB8E00" stroke-width="1.6"/>
+    <text x="520" y="1878" font-size="13" font-weight="bold" fill="#1B2631">I2C 总线事务锁</text>
+    <text x="520" y="1898" font-size="11.5" fill="#1B2631">递归互斥量保护 START..STOP</text>
+    <text x="520" y="1916" font-size="11.5" fill="#1B2631">锁序 s_oled_mtx → s_i2c_mtx</text>
+    <text x="520" y="1933" font-size="11.5" fill="#C0392B">★ 防 OLED 花屏</text>
+
+    <rect x="690" y="1854" width="290" height="86" rx="8" fill="#FEF9E7" stroke="#CB8E00" stroke-width="1.6"/>
+    <text x="835" y="1878" font-size="13" font-weight="bold" fill="#1B2631">掉电安全存储</text>
+    <text x="835" y="1898" font-size="11.5" fill="#1B2631">A/B 双槽 + 序号 + CRC32</text>
+    <text x="835" y="1916" font-size="11.5" fill="#1B2631">写一半断电 → 旧槽仍可用</text>
+    <text x="835" y="1933" font-size="11.5" fill="#C0392B">★ 配置与审计不丢</text>
+
+    <rect x="1005" y="1854" width="290" height="86" rx="8" fill="#FEF9E7" stroke="#CB8E00" stroke-width="1.6"/>
+    <text x="1150" y="1878" font-size="13" font-weight="bold" fill="#1B2631">看门狗与故障恢复</text>
+    <text x="1150" y="1898" font-size="11.5" fill="#1B2631">栈溢出 / 断言 → 死循环</text>
+    <text x="1150" y="1916" font-size="11.5" fill="#1B2631">IWDG 复位拉回可用态</text>
+    <text x="1150" y="1933" font-size="11.5" fill="#C0392B">★ 表现为静默死机</text>
+  </g>
+
+  <rect x="40" y="1962" width="1320" height="46" rx="6" fill="#FFFFFF" stroke="#AED6F1" stroke-width="1.2"/>
+  <text x="56" y="1992" font-size="12.5" fill="#1B2631">
+    全链路一句话：输入只采集不判决 → 队列异步送达 → access_task 单点仲裁 → 状态机定状态 →
+    物理/界面/审计/云端四路并行执行 → 异常由自愈与看门狗兜底。
+  </text>
+</svg>

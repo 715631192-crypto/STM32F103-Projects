@@ -1,0 +1,38 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#0A1626' }}>
+  <Box style={{ height: 120, padding: '24px 64px', borderBottom: '1px solid #1E3A5F' }}>
+    <Text style={{ fontSize: 34, fontWeight: 500, color: '#E8F0FA' }}>第 4 章 · Duty_6ms 姿态解算</Text>
+    <Text style={{ fontSize: 16, color: '#9DB4CE', marginTop: 6 }}>文件：USER/scheduler.c:99 → MATH/imu.c 的 GetAngle()</Text>
+  </Box>
+  <Box style={{ height: 540, padding: '22px 64px', flexDirection: 'row', gap: 40 }}>
+    <Box style={{ width: '52%', justifyContent: 'center' }}>
+      <CodeBlock
+        code={`GetAngle(&MPU6050, &Angle, 0.006f);
+// 四元数 / 互补融合
+// 输入：原始加速度+角速度
+// 输出：Angle.roll / pitch / yaw
+// 喂给 2ms 姿态 PID 的 .measured`}
+        language='c'
+        width={620}
+        fontSize={17}
+        theme='github-dark'
+      />
+    </Box>
+    <Box style={{ width: '44%', flexDirection: 'column', gap: 18, justifyContent: 'center' }}>
+      <Text style={{ fontSize: 19, color: '#E8F0FA', lineHeight: 1.6 }}>
+        每 6ms 把 MPU6050 原始数据融合成 <span style={{ color: '#00D1FF', fontWeight: 700 }}>姿态角 Angle</span>（roll/pitch/yaw）。
+      </Text>
+      <Box style={{ background: '#0F1E33', borderLeft: '4px solid #00D1FF', padding: '14px 20px', borderRadius: 8 }}>
+        <Text style={{ fontSize: 18, color: '#E8F0FA', lineHeight: 1.5 }}>
+          <span style={{ color: '#00D1FF', fontWeight: 700 }}>错位并行</span>：采样在 2ms、解算在 6ms、控制在 2ms——实时系统典型手法，互不阻塞。
+        </Text>
+      </Box>
+      <Text style={{ fontSize: 17, color: '#9DB4CE', lineHeight: 1.5 }}>
+        解算结果就是控制闭环的"反馈量"，缺它 PID 就是盲飞。
+      </Text>
+    </Box>
+  </Box>
+  <Box style={{ height: 60, padding: '0 64px', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>飞控+遥控 代码讲解（30min）</Text>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>09 / 22</Text>
+  </Box>
+</Slide>

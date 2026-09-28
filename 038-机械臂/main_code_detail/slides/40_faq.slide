@@ -1,0 +1,46 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>收束</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>常见问题与调试要点</Text>
+    </Box>
+    {/* B 内容区：左问 + 右答 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 360, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'center' }}>
+        {[
+          '动作组怎么执行？',
+          '上位机弹「下载」是错误？',
+          '动作组帧要 B0000! 结尾？',
+          '总线舵机与 PWM 同 ID？',
+        ].map((q, i) => (
+          <Box key={i} style={{ background: 'rgba(59,130,246,0.10)', borderRadius: 8, padding: '12px 16px' }}>
+            <Text style={{ fontSize: 17, color: '#E2E8F0', fontWeight: 'bold' }}>Q{i+1}. {q}</Text>
+          </Box>
+        ))}
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'center' }}>
+        {[
+          '存: <G0000#000P…#005P…!>；校验: $PTG:0-0!（串口1回传）；执行一次: $DGS:0!；循环: $DGT:0-0,3!。',
+          '不是。板子只回 "A"。上位机识别到 <G…> 帧自动弹「下载」，与板子存 Flash 是同一件事。',
+          '不用。save_action / parse_action 原生兼容无 B0000! 结尾，回放时跳过 Gxxxx 头与 } 尾，只执行 # 指令。',
+          '必须每轴「PWM 或总线」二选一接线。代码对 index<DJ_NUM 双驱动，若同号两舵机都接会抢信号。',
+        ].map((a, i) => (
+          <Box key={i} style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+            <Text style={{ fontSize: 16, color: '#CBD5E1', lineHeight: 1.5 }}>A{i+1}. {a}</Text>
+          </Box>
+        ))}
+        <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '12px 16px', borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 15, color: '#E2E8F0', lineHeight: 1.5 }}>
+            💡 $RST! 只复位 STM32，总线舵机不断电。已在 servo_init 末尾广播 #255P1500T2000!，软复位也能整体回中。
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>40 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

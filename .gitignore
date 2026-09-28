@@ -1,0 +1,60 @@
+# ===== 构建产物 (Keil MDK / EIDE / GCC) =====
+*.o
+*.d
+*.crf
+*.axf
+*.hex
+*.bin
+*.map
+*.dep
+*.lst
+*.lib
+*.obj
+*.bak
+Objects/
+Listings/
+build/
+DebugConfig/
+RTE/
+Output/
+
+# ===== IDE / 工具内部目录 =====
+.vscode/
+.eide/
+Debug/
+Release/
+
+# ===== WorkBuddy 内部目录（非工程内容） =====
+.slidep/
+.workbuddy/
+.cache/
+
+# ===== 压缩包 / 大文件备份 =====
+*.rar
+*.zip
+*.7z
+*.tar.gz
+
+# ===== 二进制资源（代码仓库不纳入） =====
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.ico
+*.apk
+*.keystore
+*.jks
+*.ttf
+*.woff
+*.woff2
+
+# ===== uni-app / 前端构建产物 =====
+unpackage/
+node_modules/
+dist/
+
+# ===== 日志 & 临时文件 =====
+JLinkLog.txt
+*.log
+~$*

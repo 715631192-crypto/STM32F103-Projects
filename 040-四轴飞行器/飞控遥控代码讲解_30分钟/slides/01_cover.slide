@@ -1,0 +1,31 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#0A1626', padding: 0, position: 'relative' }}>
+  <svg width='1280' height='720' viewBox='0 0 1280 720' style={{ position: 'absolute', top: 0, left: 0 }}>
+    <line x1='0' y1='180' x2='1280' y2='180' stroke='#13243C' strokeWidth='1'/>
+    <line x1='0' y1='540' x2='1280' y2='540' stroke='#13243C' strokeWidth='1'/>
+    <g transform='translate(1010,360)' opacity='0.55'>
+      <line x1='-150' y1='-150' x2='150' y2='150' stroke='#2E6CA6' strokeWidth='6'/>
+      <line x1='150' y1='-150' x2='-150' y2='150' stroke='#2E6CA6' strokeWidth='6'/>
+      <circle cx='-150' cy='-150' r='14' fill='#0F1E33' stroke='#00D1FF' strokeWidth='3'/>
+      <circle cx='150' cy='-150' r='14' fill='#0F1E33' stroke='#00D1FF' strokeWidth='3'/>
+      <circle cx='-150' cy='150' r='14' fill='#0F1E33' stroke='#00D1FF' strokeWidth='3'/>
+      <circle cx='150' cy='150' r='14' fill='#0F1E33' stroke='#00D1FF' strokeWidth='3'/>
+      <circle cx='0' cy='0' r='20' fill='#1E3A5F' stroke='#4A90D9' strokeWidth='2'/>
+    </g>
+  </svg>
+  <Box style={{ position: 'absolute', left: 0, top: 232, width: 8, height: 196, background: '#00D1FF' }} />
+  <Box style={{ position: 'absolute', left: 88, top: 224, width: 920 }}>
+    <Text style={{ fontSize: 60, fontWeight: 700, color: '#E8F0FA', lineHeight: 1.18 }}>
+      飞控 + 遥控 代码讲解
+    </Text>
+    <Text style={{ fontSize: 30, color: '#00D1FF', fontWeight: 600, marginTop: 14 }}>
+      按 main 函数顺序 · 30 分钟精讲
+    </Text>
+    <Text style={{ fontSize: 22, color: '#9DB4CE', marginTop: 22, fontWeight: 400, lineHeight: 1.5 }}>
+      从 main 入口、初始化、时间片调度，到控制闭环与双向通信桥接
+    </Text>
+  </Box>
+  <Box style={{ position: 'absolute', left: 88, bottom: 56, flexDirection: 'row', gap: 20, alignItems: 'center' }}>
+    <Box style={{ width: 44, height: 4, background: '#00D1FF' }} />
+    <Text style={{ fontSize: 16, color: '#7E94AE' }}>工程：四轴C程序V2.0 激光 + Remoter_Ctrl3.6 · STM32F103 · 2026</Text>
+  </Box>
+</Slide>

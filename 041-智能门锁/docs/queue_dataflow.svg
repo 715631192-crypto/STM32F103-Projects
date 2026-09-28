@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1060" viewBox="0 0 1500 1060" font-family="Microsoft YaHei, SimHei, sans-serif">
+  <defs>
+    <marker id="arRed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#C0392B"/>
+    </marker>
+    <marker id="arBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#1F618D"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1500" height="1060" fill="#FFFFFF"/>
+
+  <!-- 标题 -->
+  <text x="750" y="40" text-anchor="middle" font-size="22" font-weight="bold" fill="#1B2631">智能门锁 · 六条队列 生产者 / 消费者 数据流图</text>
+  <text x="750" y="66" text-anchor="middle" font-size="12.5" fill="#566573">注：代码里实际是 6 条队列（非 5 条）。access_task 是枢纽——它是 input/remote 的消费者，又是 log/notify/ui 的生产者（经 queue_* 辅助函数）。</text>
+
+  <!-- 列头 -->
+  <text x="230" y="100" text-anchor="middle" font-size="14" font-weight="bold" fill="#C0392B">生产者  xQueueSend</text>
+  <text x="750" y="100" text-anchor="middle" font-size="14" font-weight="bold" fill="#B9770E">队列（元素类型 · 容量）</text>
+  <text x="1270" y="100" text-anchor="middle" font-size="14" font-weight="bold" fill="#1F618D">消费者  xQueueReceive</text>
+
+  <!-- ================= 泳道 1 input_queue ================= -->
+  <g>
+    <rect x="40" y="132" width="380" height="86" rx="8" fill="#D6EAF8" stroke="#2E86C1" stroke-width="1.5"/>
+    <text x="230" y="170" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="230" dy="0">input_task</tspan><tspan x="230" dy="20" font-weight="normal">board_poll_input() → xQueueSend</tspan><tspan x="230" dy="20" font-weight="normal">超时 20ms</tspan></text>
+
+    <rect x="560" y="132" width="380" height="86" rx="8" fill="#FCF3CF" stroke="#B9770E" stroke-width="1.5"/>
+    <text x="750" y="170" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B2631"><tspan x="750" dy="0">input_queue</tspan><tspan x="750" dy="20" font-weight="normal">board_input_event_t</tspan><tspan x="750" dy="20" font-weight="normal">容量 12</tspan></text>
+
+    <rect x="1080" y="132" width="380" height="86" rx="8" fill="#D5F5E3" stroke="#1E8449" stroke-width="1.5"/>
+    <text x="1270" y="170" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="1270" dy="0">access_task</tspan><tspan x="1270" dy="20" font-weight="normal">xQueueReceive(100ms)</tspan><tspan x="1270" dy="20" font-weight="normal">→ handle_board_input()</tspan></text>
+
+    <line x1="420" y1="175" x2="556" y2="175" stroke="#C0392B" stroke-width="3" marker-end="url(#arRed)"/>
+    <line x1="944" y1="175" x2="1076" y2="175" stroke="#1F618D" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arBlue)"/>
+  </g>
+
+  <!-- ================= 泳道 2 remote_queue ================= -->
+  <g>
+    <rect x="40" y="277" width="380" height="86" rx="8" fill="#D6EAF8" stroke="#2E86C1" stroke-width="1.5"/>
+    <text x="230" y="315" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="230" dy="0">network_task</tspan><tspan x="230" dy="20" font-weight="normal">board_network_poll_command()</tspan><tspan x="230" dy="20" font-weight="normal">→ xQueueSend 20ms</tspan></text>
+
+    <rect x="560" y="277" width="380" height="86" rx="8" fill="#FCF3CF" stroke="#B9770E" stroke-width="1.5"/>
+    <text x="750" y="315" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B2631"><tspan x="750" dy="0">remote_queue</tspan><tspan x="750" dy="20" font-weight="normal">remote_command_t</tspan><tspan x="750" dy="20" font-weight="normal">容量 4</tspan></text>
+
+    <rect x="1080" y="277" width="380" height="86" rx="8" fill="#D5F5E3" stroke="#1E8449" stroke-width="1.5"/>
+    <text x="1270" y="315" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="1270" dy="0">access_task</tspan><tspan x="1270" dy="20" font-weight="normal">while xQueueReceive(0)</tspan><tspan x="1270" dy="20" font-weight="normal">→ handle_remote_command()</tspan></text>
+
+    <line x1="420" y1="320" x2="556" y2="320" stroke="#C0392B" stroke-width="3" marker-end="url(#arRed)"/>
+    <line x1="944" y1="320" x2="1076" y2="320" stroke="#1F618D" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arBlue)"/>
+  </g>
+
+  <!-- ================= 泳道 3 log_queue ================= -->
+  <g>
+    <rect x="40" y="422" width="380" height="86" rx="8" fill="#D6EAF8" stroke="#2E86C1" stroke-width="1.5"/>
+    <text x="230" y="460" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="230" dy="0">access_task（queue_audit）</tspan><tspan x="230" dy="20" font-weight="normal">grant/deny/duress 后调用</tspan><tspan x="230" dy="20" font-weight="normal">→ xQueueSend(0)</tspan></text>
+
+    <rect x="560" y="422" width="380" height="86" rx="8" fill="#FCF3CF" stroke="#B9770E" stroke-width="1.5"/>
+    <text x="750" y="460" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B2631"><tspan x="750" dy="0">log_queue</tspan><tspan x="750" dy="20" font-weight="normal">event_log_record_t</tspan><tspan x="750" dy="20" font-weight="normal">容量 8</tspan></text>
+
+    <rect x="1080" y="422" width="380" height="86" rx="8" fill="#D5F5E3" stroke="#1E8449" stroke-width="1.5"/>
+    <text x="1270" y="460" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="1270" dy="0">log_task</tspan><tspan x="1270" dy="20" font-weight="normal">xQueueReceive(50ms)</tspan><tspan x="1270" dy="20" font-weight="normal">→ event_log_append()</tspan></text>
+
+    <line x1="420" y1="465" x2="556" y2="465" stroke="#C0392B" stroke-width="3" marker-end="url(#arRed)"/>
+    <line x1="944" y1="465" x2="1076" y2="465" stroke="#1F618D" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arBlue)"/>
+  </g>
+
+  <!-- ================= 泳道 4 notify_queue ================= -->
+  <g>
+    <rect x="40" y="567" width="380" height="86" rx="8" fill="#D6EAF8" stroke="#2E86C1" stroke-width="1.5"/>
+    <text x="230" y="605" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="230" dy="0">access_task（queue_audit）</tspan><tspan x="230" dy="20" font-weight="normal">与 log 同帧投递</tspan><tspan x="230" dy="20" font-weight="normal">→ xQueueSend(0)</tspan></text>
+
+    <rect x="560" y="567" width="380" height="86" rx="8" fill="#FCF3CF" stroke="#B9770E" stroke-width="1.5"/>
+    <text x="750" y="605" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B2631"><tspan x="750" dy="0">notify_queue</tspan><tspan x="750" dy="20" font-weight="normal">board_notification_t</tspan><tspan x="750" dy="20" font-weight="normal">容量 8</tspan></text>
+
+    <rect x="1080" y="567" width="380" height="86" rx="8" fill="#D5F5E3" stroke="#1E8449" stroke-width="1.5"/>
+    <text x="1270" y="605" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="1270" dy="0">network_task</tspan><tspan x="1270" dy="20" font-weight="normal">xQueueReceive(0)</tspan><tspan x="1270" dy="20" font-weight="normal">→ board_network_publish()</tspan></text>
+
+    <line x1="420" y1="610" x2="556" y2="610" stroke="#C0392B" stroke-width="3" marker-end="url(#arRed)"/>
+    <line x1="944" y1="610" x2="1076" y2="610" stroke="#1F618D" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arBlue)"/>
+  </g>
+
+  <!-- ================= 泳道 5 ui_queue ================= -->
+  <g>
+    <rect x="40" y="712" width="380" height="86" rx="8" fill="#D6EAF8" stroke="#2E86C1" stroke-width="1.5"/>
+    <text x="230" y="750" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="230" dy="0">access_task</tspan><tspan x="230" dy="20" font-weight="normal">queue_ui / queue_menu /</tspan><tspan x="230" dy="20" font-weight="normal">queue_ui_log → xQueueSend(0)</tspan></text>
+
+    <rect x="560" y="712" width="380" height="86" rx="8" fill="#FCF3CF" stroke="#B9770E" stroke-width="1.5"/>
+    <text x="750" y="750" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B2631"><tspan x="750" dy="0">ui_queue</tspan><tspan x="750" dy="20" font-weight="normal">app_ui_message_t</tspan><tspan x="750" dy="20" font-weight="normal">容量 6</tspan></text>
+
+    <rect x="1080" y="712" width="380" height="86" rx="8" fill="#D5F5E3" stroke="#1E8449" stroke-width="1.5"/>
+    <text x="1270" y="750" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="1270" dy="0">ui_task</tspan><tspan x="1270" dy="20" font-weight="normal">xQueueReceive(portMAX_DELAY)</tspan><tspan x="1270" dy="20" font-weight="normal">→ board_ui_show / menu_show</tspan></text>
+
+    <line x1="420" y1="755" x2="556" y2="755" stroke="#C0392B" stroke-width="3" marker-end="url(#arRed)"/>
+    <line x1="944" y1="755" x2="1076" y2="755" stroke="#1F618D" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arBlue)"/>
+  </g>
+
+  <!-- ================= 泳道 6 log_request_queue ================= -->
+  <g>
+    <rect x="40" y="857" width="380" height="86" rx="8" fill="#D6EAF8" stroke="#2E86C1" stroke-width="1.5"/>
+    <text x="230" y="895" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="230" dy="0">菜单逻辑</tspan><tspan x="230" dy="20" font-weight="normal">menu_log_key() / menu_key()</tspan><tspan x="230" dy="20" font-weight="normal">翻看记录时 → xQueueSend(0)</tspan></text>
+
+    <rect x="560" y="857" width="380" height="86" rx="8" fill="#FCF3CF" stroke="#B9770E" stroke-width="1.5"/>
+    <text x="750" y="895" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1B2631"><tspan x="750" dy="0">log_request_queue</tspan><tspan x="750" dy="20" font-weight="normal">uint32_t（第 N 条偏移）</tspan><tspan x="750" dy="20" font-weight="normal">容量 4</tspan></text>
+
+    <rect x="1080" y="857" width="380" height="86" rx="8" fill="#D5F5E3" stroke="#1E8449" stroke-width="1.5"/>
+    <text x="1270" y="895" text-anchor="middle" font-size="13" font-weight="bold" fill="#1B2631"><tspan x="1270" dy="0">log_task</tspan><tspan x="1270" dy="20" font-weight="normal">while xQueueReceive(0)</tspan><tspan x="1270" dy="20" font-weight="normal">→ event_log_read_recent()</tspan></text>
+
+    <line x1="420" y1="900" x2="556" y2="900" stroke="#C0392B" stroke-width="3" marker-end="url(#arRed)"/>
+    <line x1="944" y1="900" x2="1076" y2="900" stroke="#1F618D" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arBlue)"/>
+  </g>
+
+  <!-- 图例 -->
+  <line x1="60" y1="1015" x2="120" y2="1015" stroke="#C0392B" stroke-width="3" marker-end="url(#arRed)"/>
+  <text x="130" y="1020" font-size="12.5" fill="#566573">生产 xQueueSend（红色实线）</text>
+  <line x1="360" y1="1015" x2="420" y2="1015" stroke="#1F618D" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arBlue)"/>
+  <text x="430" y="1020" font-size="12.5" fill="#566573">消费 xQueueReceive（蓝色虚线）</text>
+</svg>

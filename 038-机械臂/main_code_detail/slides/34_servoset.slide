@@ -1,0 +1,62 @@
+<Slide>
+  <Box style={{ width: '1280px', height: '720px', background: '#0B1120', padding: '20px 64px', display: 'flex', flexDirection: 'column' }}>
+    {/* A 标题块 */}
+    <Box style={{ height: 96, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderBottom: '2px solid rgba(59,130,246,0.3)' }}>
+      <Text style={{ fontSize: 15, color: '#06B6D4', fontWeight: 'bold', letterSpacing: 2 }}>第 5 章 · 波形输出</Text>
+      <Text style={{ fontSize: 34, color: '#E2E8F0', fontWeight: 'bold', marginTop: 4 }}>servo_pin_set 与 duoji_doing_set</Text>
+    </Box>
+    {/* B 内容区：左代码 + 右说明 */}
+    <Box style={{ flex: 1, marginTop: 16, display: 'flex', flexDirection: 'row', gap: 28 }}>
+      <Box style={{ width: 600 }}>
+        <CodeBlock
+          code={`/* 切换指定舵机引脚电平 */
+void servo_pin_set(u8 index, BitAction level) {
+    switch (index) {
+      case 0: SERVO0_PIN_SET(level); break;
+      case 1: SERVO1_PIN_SET(level); break;
+      /* ... 2~5 ... */
+      default: break;   // 6/7 无物理脚
+    }
+}
+
+/* 设置目标与平滑增量 */
+void duoji_doing_set(u8 index, int aim, int time) {
+    if (index >= DJ_NUM) return;
+    if (aim == 0) { /* 停 */ }
+    else if (aim > 2490) aim = 2490;  // 上限钳位
+    else if (aim < 510)  aim = 510;   // 下限钳位
+    if (time > 10000) time = 10000;
+    duoji_doing[index].aim = aim;
+    duoji_doing[index].time = time;
+    duoji_doing[index].inc = (aim-cur)/(time/20.0);
+}`}
+          language='c'
+          width={600}
+          fontSize={13}
+        />
+      </Box>
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+        <Box style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.55 }}>
+            <span style={{ color: '#3B82F6', fontWeight: 'bold' }}>servo_pin_set</span>：TIM2 中断里调它把当前舵机脚拉高/拉低。switch 映射到 6 个物理引脚，6/7 槽 default 空转。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(6,182,212,0.08)', borderRadius: 8, padding: '12px 16px' }}>
+          <Text style={{ fontSize: 17, color: '#CBD5E1', lineHeight: 1.55 }}>
+            <span style={{ color: '#06B6D4', fontWeight: 'bold' }}>duoji_doing_set</span>：被 parse_action 调用，写入目标与「每 20ms 步进 inc」。只改 aim+inc，不直接动 cur。
+          </Text>
+        </Box>
+        <Box style={{ background: 'rgba(251,191,36,0.08)', borderRadius: 8, padding: '12px 16px', borderLeft: '4px solid #FBBF24' }}>
+          <Text style={{ fontSize: 16, color: '#E2E8F0', lineHeight: '1.5' }}>
+            钳位很关键：<span style={{ color: '#FBBF24' }}>aim&gt;2490</span> 会让下半拍 <span style={{ color: '#06B6D4' }}>2500-cur</span> 变负→ARR 溢出舵机抽风；<span style={{ color: '#FBBF24' }}>aim&lt;510</span> 高脉冲过窄舵机不识别。
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+    {/* C 页脚 */}
+    <Box style={{ height: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>六轴机械臂代码详解</Text>
+      <Text style={{ fontSize: 14, color: '#94A3B8' }}>34 / 41</Text>
+    </Box>
+  </Box>
+</Slide>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STM32 智能门锁固件 main() 执行流程讲解</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f6f7f9; --ink:#2c2c2a; --muted:#5f5e5a;
+    --line:#d3d1c7; --blue:#185fa5; --teal:#0f6e56; --purple:#534ab7;
+    --amber:#854f0b; --red:#a32d2d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--panel);color:var(--ink);
+       font:400 15px/1.7 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 20px 64px;}
+  h1{font-size:26px;font-weight:600;margin:0 0 6px;}
+  h2{font-size:20px;font-weight:600;margin:40px 0 12px;padding-left:10px;
+     border-left:4px solid var(--blue);}
+  h3{font-size:16px;font-weight:600;margin:24px 0 8px;color:var(--blue);}
+  p{margin:10px 0;}
+  .lead{color:var(--muted);margin:0 0 8px;}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:12px;
+        padding:18px;margin:16px 0;overflow-x:auto;}
+  .card svg{width:100%;height:auto;display:block;}
+  code{background:#eef0f3;border-radius:5px;padding:1px 6px;font-size:13px;
+       font-family:"SFMono-Regular",Consolas,monospace;color:#9b2c2c;}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:#eef0f3;font-weight:600;}
+  .tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;
+       background:#e6f1fb;color:var(--blue);margin-right:6px;}
+  .note{background:#fbf4e6;border:1px solid #f3d9a6;border-radius:10px;
+        padding:12px 14px;color:#633806;font-size:14px;margin:14px 0;}
+  .step{font-family:monospace;color:var(--teal);font-weight:600;}
+  ul{margin:10px 0;padding-left:22px;}
+  li{margin:6px 0;}
+  .foot{color:var(--muted);font-size:13px;margin-top:48px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>STM32 智能门锁固件 · <code>main()</code> 执行流程讲解</h1>
+<p class="lead">按 <code>main()</code> → <code>smart_lock_app_start()</code> → <code>board_init()</code> → 队列/任务创建 → <code>vTaskStartScheduler()</code> 的真实调用顺序梳理。代码位置：<code>firmware/stm32/src/main.c</code>、<code>board_port.c</code>、<code>smart_lock_app.c</code>。</p>
+
+<div class="note">一句话总览：<b>main() 只做两件事</b>——调用 <code>smart_lock_app_start()</code> 把硬件、配置、队列、任务全部准备好，然后 <code>vTaskStartScheduler()</code> 把 CPU 交给 FreeRTOS。之后 <code>main()</code> 永不返回，所有工作由 5 个并发任务完成。</div>
+
+<!-- ============ 图1：启动总览 ============ -->
+<h2>1. 启动总览流程图</h2>
+<div class="card">
+<svg viewBox="0 0 680 560" role="img" aria-label="main 启动总览">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5f5e5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <!-- n1 -->
+  <rect x="120" y="40" width="440" height="48" rx="8" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.5"/>
+  <text x="340" y="58" text-anchor="middle" font="500 14px sans-serif" font-weight="500" fill="#2c2c2a">上电复位 → SystemInit() 配置 72MHz 系统时钟</text>
+  <text x="340" y="76" text-anchor="middle" font="400 12px sans-serif" fill="#5f5e5a">由启动文件调用，main() 内不再配时钟</text>
+  <!-- n2 -->
+  <rect x="120" y="110" width="440" height="48" rx="8" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="340" y="128" text-anchor="middle" font-weight="500" fill="#042c53">main()  (main.c)</text>
+  <text x="340" y="146" text-anchor="middle" fill="#185fa5">调用 smart_lock_app_start()</text>
+  <!-- n3 -->
+  <rect x="120" y="180" width="440" height="64" rx="8" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="340" y="200" text-anchor="middle" font-weight="500" fill="#042c53">smart_lock_app_start()  (smart_lock_app.c)</text>
+  <text x="340" y="220" text-anchor="middle" fill="#185fa5">① board_init() 硬件初始化</text>
+  <text x="340" y="238" text-anchor="middle" fill="#185fa5">② 加载/校验安全配置  ③ 初始化事件日志  ④ 建队列/任务</text>
+  <!-- n4 -->
+  <rect x="120" y="270" width="440" height="48" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <text x="340" y="288" text-anchor="middle" font-weight="500" fill="#04342c">board_init() 返回 true</text>
+  <text x="340" y="306" text-anchor="middle" fill="#0f6e56">9 步硬件初始化全部完成，[BOOT] ready 已打印</text>
+  <!-- n5 -->
+  <rect x="120" y="340" width="440" height="48" rx="8" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="340" y="358" text-anchor="middle" font-weight="500" fill="#26215c">创建 6 个静态队列 + 5 个任务 (xTaskCreateStatic)</text>
+  <text x="340" y="376" text-anchor="middle" fill="#534ab7">input/remote/log/notify/ui/log_request 队列</text>
+  <!-- n6 -->
+  <rect x="120" y="410" width="440" height="48" rx="8" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="340" y="428" text-anchor="middle" font-weight="500" fill="#26215c">vTaskStartScheduler()  启动 FreeRTOS 调度器</text>
+  <text x="340" y="446" text-anchor="middle" fill="#534ab7">开始按优先级分时调度任务</text>
+  <!-- n7 -->
+  <rect x="120" y="480" width="440" height="48" rx="8" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="340" y="498" text-anchor="middle" font-weight="500" fill="#26215c">5 个任务并发运行（永不返回）</text>
+  <text x="340" y="516" text-anchor="middle" fill="#534ab7">input / access / network / log / ui</text>
+  <!-- arrows -->
+  <line x1="340" y1="88" x2="340" y2="108" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a1)"/>
+  <line x1="340" y1="158" x2="340" y2="178" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a1)"/>
+  <line x1="340" y1="244" x2="340" y2="268" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a1)"/>
+  <line x1="340" y1="318" x2="340" y2="338" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a1)"/>
+  <line x1="340" y1="388" x2="340" y2="408" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a1)"/>
+  <line x1="340" y1="458" x2="340" y2="478" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a1)"/>
+  <!-- side note -->
+  <rect x="470" y="110" width="190" height="60" rx="8" fill="#fcebeb" stroke="#a32d2d" stroke-width="0.5"/>
+  <text x="565" y="132" text-anchor="middle" fill="#791f1f" font-size="12">若启动失败</text>
+  <text x="565" y="150" text-anchor="middle" fill="#791f1f" font-size="12">main 内 for(;;) 死循环</text>
+  <text x="565" y="166" text-anchor="middle" fill="#791f1f" font-size="12">等看门狗复位</text>
+  <line x1="560" y1="170" x2="430" y2="165" stroke="#a32d2d" stroke-width="1" stroke-dasharray="3 3"/>
+</svg>
+</div>
+
+<!-- ============ 图2：board_init 9 步 ============ -->
+<h2>2. <code>board_init()</code> 内部 9 步初始化顺序</h2>
+<p class="lead">位于 <code>board_port.c:610</code>。顺序很关键：先释放 JTAG 脚才能用键盘；先 <code>IIC_Init</code> 才能 <code>OLED_Init</code>；先 <code>W25Q64_Init</code> 成功才继续；RC522 首次初始化可能失败需重试。</p>
+<div class="card">
+<svg viewBox="0 0 680 640" role="img" aria-label="board_init 9 步">
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#0f6e56" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <!-- 9 steps -->
+  <!-- i=0 y=36 -->
+  <rect x="110" y="36" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="62" r="14" fill="#0f6e56"/><text x="138" y="62" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">1</text>
+  <text x="168" y="58" font-weight="500" fill="#04342c">sys_init() + delay_init()</text>
+  <text x="168" y="78" fill="#0f6e56" font-size="12.5">NVIC 中断分组 / 释放 PA15·PB3·PB4（否则键盘不可用）</text>
+  <!-- i=1 y=100 -->
+  <rect x="110" y="100" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="126" r="14" fill="#0f6e56"/><text x="138" y="126" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">2</text>
+  <text x="168" y="122" font-weight="500" fill="#04342c">三路串口初始化</text>
+  <text x="168" y="142" fill="#0f6e56" font-size="12.5">USART1 ESP8266 / USART2 指纹 AS608 / USART3 调试打印</text>
+  <!-- i=2 y=164 -->
+  <rect x="110" y="164" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="190" r="14" fill="#0f6e56"/><text x="138" y="190" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">3</text>
+  <text x="168" y="186" font-weight="500" fill="#04342c">显示与本地交互</text>
+  <text x="168" y="206" fill="#0f6e56" font-size="12.5">IIC_Init → OLED_Init → OLED_Clear / 蜂鸣器 / RGB</text>
+  <!-- i=3 y=228 -->
+  <rect x="110" y="228" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="254" r="14" fill="#0f6e56"/><text x="138" y="254" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">4</text>
+  <text x="168" y="250" font-weight="500" fill="#04342c">W25Q64 存储初始化</text>
+  <text x="168" y="270" fill="#0f6e56" font-size="12.5">Init 失败 → 报诊断并返回 false（配置/日志都存这里）</text>
+  <!-- i=4 y=292 -->
+  <rect x="110" y="292" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="318" r="14" fill="#0f6e56"/><text x="138" y="318" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">5</text>
+  <text x="168" y="314" font-weight="500" fill="#04342c">RC522 射频读卡</text>
+  <text x="168" y="334" fill="#0f6e56" font-size="12.5">ProbeMiso → Init → Check（首次不通则再 Init 一次救回）</text>
+  <!-- i=5 y=356 -->
+  <rect x="110" y="356" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="382" r="14" fill="#0f6e56"/><text x="138" y="382" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">6</text>
+  <text x="168" y="378" font-weight="500" fill="#04342c">DS3231 实时时钟</text>
+  <text x="168" y="398" fill="#0f6e56" font-size="12.5">Init + 读 UTC 时间；无 ACK 自动回落软时钟</text>
+  <!-- i=6 y=420 -->
+  <rect x="110" y="420" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="446" r="14" fill="#0f6e56"/><text x="138" y="446" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">7</text>
+  <text x="168" y="442" font-weight="500" fill="#04342c">舵机执行器</text>
+  <text x="168" y="462" fill="#0f6e56" font-size="12.5">servo_init + servo_lock：上电即回到锁闭位</text>
+  <!-- i=7 y=484 -->
+  <rect x="110" y="484" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="510" r="14" fill="#0f6e56"/><text x="138" y="510" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">8</text>
+  <text x="168" y="506" font-weight="500" fill="#04342c">键盘与唤醒键</text>
+  <text x="168" y="526" fill="#0f6e56" font-size="12.5">keypad / wake init + 扫描状态结构体初始化</text>
+  <!-- i=8 y=548 -->
+  <rect x="110" y="548" width="470" height="52" rx="8" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+  <circle cx="138" cy="574" r="14" fill="#0f6e56"/><text x="138" y="574" text-anchor="middle" fill="#fff" font-weight="500" font-size="13">9</text>
+  <text x="168" y="570" font-weight="500" fill="#04342c">云端与看门狗</text>
+  <text x="168" y="590" fill="#0f6e56" font-size="12.5">app_wifi_init() 注册 MQTT 下行 + watchdog_init → 打印 [BOOT] ready</text>
+  <!-- arrows between -->
+  <line x1="345" y1="88" x2="345" y2="98" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="345" y1="152" x2="345" y2="162" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="345" y1="216" x2="345" y2="226" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="345" y1="280" x2="345" y2="290" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="345" y1="344" x2="345" y2="354" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="345" y1="408" x2="345" y2="418" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="345" y1="472" x2="345" y2="482" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="345" y1="536" x2="345" y2="546" stroke="#0f6e56" stroke-width="1.5" marker-end="url(#a2)"/>
+</svg>
+</div>
+
+<!-- ============ 图3：5 任务运行时 ============ -->
+<h2>3. FreeRTOS 5 任务运行时与队列关系</h2>
+<p class="lead"><code>vTaskStartScheduler()</code> 之后，5 个任务并发跑。它们不直接互相调用，而是通过<b>队列</b>解耦：输入/网络把事件塞进队列，access 消费并决策，ui/log 负责呈现与落盘。</p>
+<div class="card">
+<svg viewBox="0 0 680 280" role="img" aria-label="5 任务与队列">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#5f5e5a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <!-- input -->
+  <rect x="40" y="36" width="172" height="58" rx="8" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="126" y="58" text-anchor="middle" font-weight="500" fill="#042c53">input_task</text>
+  <text x="126" y="78" text-anchor="middle" fill="#185fa5" font-size="12">prio3 · 10ms 轮询键盘</text>
+  <!-- network -->
+  <rect x="40" y="150" width="172" height="58" rx="8" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+  <text x="126" y="172" text-anchor="middle" font-weight="500" fill="#042c53">network_task</text>
+  <text x="126" y="192" text-anchor="middle" fill="#185fa5" font-size="12">prio2 · 50ms 收 MQTT</text>
+  <!-- access -->
+  <rect x="255" y="95" width="172" height="58" rx="8" fill="#eeedfe" stroke="#534ab7" stroke-width="0.5"/>
+  <text x="341" y="117" text-anchor="middle" font-weight="500" fill="#26215c">access_task</text>
+  <text x="341" y="137" text-anchor="middle" fill="#534ab7" font-size="12">prio4 · 100ms 鉴权/锁控</text>
+  <!-- ui -->
+  <rect x="470" y="36" width="172" height="58" rx="8" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="556" y="58" text-anchor="middle" font-weight="500" fill="#412402">ui_task</text>
+  <text x="556" y="78" text-anchor="middle" fill="#854f0b" font-size="12">prio1 · 等 ui_queue 刷屏</text>
+  <!-- log -->
+  <rect x="470" y="150" width="172" height="58" rx="8" fill="#faedda" stroke="#854f0b" stroke-width="0.5"/>
+  <text x="556" y="172" text-anchor="middle" font-weight="500" fill="#412402">log_task</text>
+  <text x="556" y="192" text-anchor="middle" fill="#854f0b" font-size="12">prio1 · 写审计日志</text>
+  <!-- arrows -->
+  <line x1="212" y1="70" x2="253" y2="110" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="234" y="84" text-anchor="middle" fill="#5f5e5a" font-size="11">input_q</text>
+  <line x1="212" y1="180" x2="253" y2="125" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="234" y="160" text-anchor="middle" fill="#5f5e5a" font-size="11">remote_q</text>
+  <line x1="427" y1="118" x2="468" y2="66" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="448" y="86" text-anchor="middle" fill="#5f5e5a" font-size="11">ui_q</text>
+  <line x1="427" y1="122" x2="468" y2="178" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="452" y="160" text-anchor="middle" fill="#5f5e5a" font-size="11">log_q</text>
+  <line x1="556" y1="150" x2="556" y2="94" stroke="#5f5e5a" stroke-width="1.5" marker-end="url(#a3)"/>
+  <text x="600" y="124" text-anchor="middle" fill="#5f5e5a" font-size="11">log_req_q</text>
+</svg>
+</div>
+
+<!-- ============ 逐段讲解 ============ -->
+<h2>4. 逐段代码讲解</h2>
+
+<h3>4.1 <code>main()</code> — 入口极简（main.c:17-34）</h3>
+<pre style="background:#eef0f3;border-radius:8px;padding:12px;font-size:13px;overflow:auto"><code>int main(void){
+    if (!smart_lock_app_start()) {
+        for (;;) {}            // 启动失败：死循环等看门狗
+    }
+    vTaskStartScheduler();    // 交出 CPU，永不返回
+    for (;;) {}               // 仅堆不足导致调度器没起来才会到这
+}</code></pre>
+<p><code>main()</code> 只做两件事：① 调 <code>smart_lock_app_start()</code> 完成一切准备工作；② 调 <code>vTaskStartScheduler()</code>。72MHz 时钟由启动文件里的 <code>SystemInit()</code> 配好，main 不再碰时钟。若准备失败（Flash 无响应/配置写不进/任务创建失败）就原地死循环，由看门狗复位；正常路径 <code>main()</code> 不会走到最后一行。</p>
+
+<h3>4.2 <code>smart_lock_app_start()</code> — 准备阶段（smart_lock_app.c:1808-1877）</h3>
+<p>这是真正干活的"总装车间"，按顺序做四组事：</p>
+<ul>
+  <li><span class="tag">硬件</span><code>board_init()</code>：见 4.3，把 9 类外设全部初始化。</li>
+  <li><span class="tag">配置</span><code>board_security_load()</code> 从 W25Q64 读出厂/已存的安全配置（主密码、胁迫密码、TOTP 种子等），再 <code>security_config_valid()</code> 校验信封（版本+序号+CRC32）。</li>
+  <li><span class="tag">日志</span><code>event_log_init()</code> 挂上 W25Q64 的读写擦回调，准备好环形审计日志。</li>
+  <li><span class="tag">内核对象</span>清状态变量 → <code>lock_controller_init()</code>（自动落锁延时）→ <code>set_physical_state()</code> 让舵机实际锁门。然后 <code>xQueueCreateStatic()</code> 创建 <b>6 个队列</b>：input / remote / log / notify / ui / log_request，全部静态分配（工程堆仅 4KB）。最后 <code>xTaskCreateStatic()</code> 创建 <b>5 个任务</b>，任何一步失败都返回 false。</li>
+</ul>
+<p>全部成功后 <code>queue_ui(controller.state, "System ready", true)</code> 让屏幕显示就绪，返回 true 给 main。</p>
+
+<h3>4.3 <code>board_init()</code> — 9 步硬件初始化（board_port.c:610-729）</h3>
+<p>顺序见流程图 2，要点：</p>
+<table>
+  <tr><th>步</th><th>做了什么</th><th>为什么这个顺序</th></tr>
+  <tr><td>1</td><td><code>sys_init()</code> NVIC 分组 + 释放 PA15/PB3/PB4</td><td>不释放 JTAG 脚，键盘行就不可用</td></tr>
+  <tr><td>2</td><td>USART1/2/3 初始化</td><td>先有调试串口，后面才有 printf 输出</td></tr>
+  <tr><td>3</td><td>IIC→OLED→Clear / 蜂鸣器 / RGB</td><td>必须先 <code>IIC_Init</code> 才能驱动 OLED；<code>OLED_Clear</code> 清掉上电随机显存，避免"乱屏"</td></tr>
+  <tr><td>4</td><td>W25Q64 存储</td><td>失败直接 return false，因为配置和日志都依赖它</td></tr>
+  <tr><td>5</td><td>RC522 读卡</td><td>上电瞬间芯片状态机没起来，<code>Check</code> 不通就再 <code>Init</code> 一次救回</td></tr>
+  <tr><td>6</td><td>DS3231 时钟</td><td>读 UTC 并打印，无 ACK 自动回落软时钟</td></tr>
+  <tr><td>7</td><td>舵机 servo_init + servo_lock</td><td>上电即锁门，安全优先</td></tr>
+  <tr><td>8</td><td>键盘 + 唤醒键</td><td>初始化扫描状态结构体</td></tr>
+  <tr><td>9</td><td>app_wifi_init + watchdog_init</td><td>注册 MQTT 下行回调、开看门狗，最后打印 <code>[BOOT] ready</code></td></tr>
+</table>
+
+<h3>4.4 <code>vTaskStartScheduler()</code> — 进入多任务（main.c:29）</h3>
+<p>调度器启动后，5 个任务按优先级被调度。FreeRTOS 用<b>全静态分配</b>（无动态堆申请），所以启动几乎不会因内存失败。此后 <code>main()</code> 不再执行，CPU 在任务间切换。</p>
+
+<h3>4.5 五个任务的"死循环"（smart_lock_app.c）</h3>
+<table>
+  <tr><th>任务</th><th>优先级</th><th>节拍</th><th>职责</th></tr>
+  <tr><td>input_task</td><td>3</td><td>10ms</td><td><code>board_poll_input()</code> 扫键盘，事件塞进 input_queue</td></tr>
+  <tr><td>access_task</td><td>4（最高）</td><td>100ms</td><td>消费 input/remote 队列 → 鉴权决策 → 锁控；管理菜单；每秒 tick 处理自动落锁/门未关/进 STOP 省电</td></tr>
+  <tr><td>network_task</td><td>2</td><td>50ms</td><td>轮询 ESP8266 收远程指令塞 remote_queue；发 notify_queue 里的上报</td></tr>
+  <tr><td>log_task</td><td>1</td><td>50ms</td><td>消费 log_queue 写 W25Q64 审计日志；响应 log_request_queue 回读</td></tr>
+  <tr><td>ui_task</td><td>1</td><td>阻塞等</td><td>等 ui_queue，调 <code>board_ui_show()</code>/<code>board_menu_show()</code> 刷屏</td></tr>
+</table>
+<p class="note">优先级数字越大越高：<b>access(4) &gt; input(3) &gt; network(2) &gt; log/ui(1)</b>。access 最高是因为开锁决策必须及时；ui 最低，刷屏慢一点不影响安全。各任务通过队列解耦，互不直接调用——这也是为什么 I2C 总线要加"事务层递归锁"（见长记忆第八节）：OLED 与 DS3231 共用 PB8/PB9，被不同优先级任务访问时若不锁住整笔事务就会屏幕错乱。</p>
+
+<!-- ============ 速查 ============ -->
+<h2>5. 关键约定速查</h2>
+<table>
+  <tr><th>项</th><th>值 / 位置</th></tr>
+  <tr><td>入口文件</td><td><code>firmware/stm32/src/main.c</code></td></tr>
+  <tr><td>总装函数</td><td><code>smart_lock_app_start()</code> @ smart_lock_app.c:1808</td></tr>
+  <tr><td>硬件初始化</td><td><code>board_init()</code> @ board_port.c:610</td></tr>
+  <tr><td>系统时钟</td><td>72MHz，由启动文件 <code>SystemInit()</code> 配置</td></tr>
+  <tr><td>队列数 / 任务数</td><td>6 个静态队列 / 5 个静态任务</td></tr>
+  <tr><td>看门狗</td><td><code>SMART_LOCK_ENABLE_IWDG=1</code> 时发布版启用；access 每秒 <code>board_watchdog_refresh()</code></td></tr>
+  <tr><td>启动失败表现</td><td>main 内 <code>for(;;)</code> 死循环，等看门狗复位</td></tr>
+</table>
+
+<div class="foot">本文档由 WorkBuddy 依据当前固件源码生成，配合三张流程图（启动总览 / board_init 9 步 / 5 任务运行时）使用。</div>
+
+</div>
+</body>
+</html>

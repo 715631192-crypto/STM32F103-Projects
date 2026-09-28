@@ -1,0 +1,36 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#0A1626' }}>
+  <Box style={{ height: 120, padding: '24px 64px', borderBottom: '1px solid #1E3A5F' }}>
+    <Text style={{ fontSize: 34, fontWeight: 500, color: '#E8F0FA' }}>第 1 章① · 飞控 main() 入口</Text>
+    <Text style={{ fontSize: 16, color: '#9DB4CE', marginTop: 6 }}>文件：飞控程序/四轴C程序V2.0 激光/USER/main.c · 第 34 行</Text>
+  </Box>
+  <Box style={{ height: 540, padding: '22px 64px', flexDirection: 'row', gap: 44 }}>
+    <Box style={{ width: '56%', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+      {[['1','cycleCounterInit()','DWT 周期计数器，供 GetSysTime_us() 测耗时'],
+        ['2','NVIC_PriorityGroupConfig(Group_4)','4 位抢占优先级'],
+        ['3','SysTick_Config(CoreClock/1000)','1ms 系统滴答'],
+        ['4','ALL_Init()','全部外设初始化（下页详解）'],
+        ['5','IWDG_Init(4,625)','独立看门狗，1s 溢出复位'],
+        ['6','while(1){ main_loop(); IWDG_Feed(); }','主循环 + 喂狗']].map((d,i)=>(
+        <Box key={i} style={{ flexDirection: 'row', alignItems: 'center', background: '#0F1E33', padding: '12px 18px', borderRadius: 8, borderLeft: '4px solid #00D1FF' }}>
+          <Text style={{ fontSize: 18, color: '#00D1FF', fontWeight: 700, width: 28 }}>{d[0]}</Text>
+          <Text style={{ fontSize: 20, color: '#E8F0FA', fontWeight: 600, width: 300, fontFamily: 'monospace' }}>{d[1]}</Text>
+          <Text style={{ fontSize: 15, color: '#9DB4CE', flex: 1, lineHeight: 1.4 }}>{d[2]}</Text>
+        </Box>
+      ))}
+    </Box>
+    <Box style={{ width: '40%', flexDirection: 'column', gap: 16, justifyContent: 'center' }}>
+      <Box style={{ background: '#0F1E33', borderLeft: '4px solid #4A90D9', padding: '16px 22px', borderRadius: 8 }}>
+        <Text style={{ fontSize: 18, color: '#E8F0FA', lineHeight: 1.55 }}>
+          入口只做两件事：<span style={{ color: '#00D1FF', fontWeight: 700 }}>把外设打开</span> + <span style={{ color: '#00D1FF', fontWeight: 700 }}>进入不死循环的主循环</span>。真正飞控逻辑全在 main_loop() 里。
+        </Text>
+      </Box>
+      <Text style={{ fontSize: 17, color: '#9DB4CE', lineHeight: 1.5 }}>
+        讲解时先点出 <span style={{ color: '#4A90D9' }}>IWDG</span>：程序跑飞会 1s 后自动复位，是"最后的保险"。
+      </Text>
+    </Box>
+  </Box>
+  <Box style={{ height: 60, padding: '0 64px', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>飞控+遥控 代码讲解（30min）</Text>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>04 / 22</Text>
+  </Box>
+</Slide>

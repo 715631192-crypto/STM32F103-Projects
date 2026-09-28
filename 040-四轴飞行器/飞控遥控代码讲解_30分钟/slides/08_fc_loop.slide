@@ -1,0 +1,49 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#0A1626' }}>
+  <Box style={{ height: 120, padding: '24px 64px', borderBottom: '1px solid #1E3A5F' }}>
+    <Text style={{ fontSize: 34, fontWeight: 500, color: '#E8F0FA' }}>第 3 章② · 控制闭环全链路图</Text>
+    <Text style={{ fontSize: 16, color: '#9DB4CE', marginTop: 6 }}>采样(2ms) 与 解算(6ms) 错位并行，反馈喂给姿态 PID —— 这就是"飞起来"的链路</Text>
+  </Box>
+  <Box style={{ height: 540, padding: '20px 64px', flexDirection: 'row', gap: 30, alignItems: 'center' }}>
+    <Box style={{ width: '62%' }}>
+      <svg width='700' height='440' viewBox='0 0 700 440'>
+        <rect x='20' y='40' width='150' height='56' rx='10' fill='#1E3A5F' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='95' y='72' fill='#E8F0FA' fontSize='16' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>MPU6050</text>
+        <rect x='210' y='40' width='170' height='56' rx='10' fill='#0F1E33' stroke='#00D1FF' strokeWidth='2'/>
+        <text x='295' y='64' fill='#00D1FF' fontSize='15' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>MpuGetData()</text>
+        <text x='295' y='84' fill='#9DB4CE' fontSize='12' textAnchor='middle' fontFamily='sans-serif'>2ms 采样滤波</text>
+        <rect x='20' y='180' width='170' height='56' rx='10' fill='#0F1E33' stroke='#4A90D9' strokeWidth='2'/>
+        <text x='105' y='204' fill='#4A90D9' fontSize='15' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>GetAngle()</text>
+        <text x='105' y='224' fill='#9DB4CE' fontSize='12' textAnchor='middle' fontFamily='sans-serif'>6ms 四元数解算</text>
+        <rect x='420' y='180' width='190' height='56' rx='10' fill='#0F1E33' stroke='#00D1FF' strokeWidth='2'/>
+        <text x='515' y='204' fill='#00D1FF' fontSize='15' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>FlightPidControl()</text>
+        <text x='515' y='224' fill='#9DB4CE' fontSize='12' textAnchor='middle' fontFamily='sans-serif'>2ms 串级PID</text>
+        <rect x='420' y='320' width='190' height='56' rx='10' fill='#1E3A5F' stroke='#00D1FF' strokeWidth='2'/>
+        <text x='515' y='344' fill='#E8F0FA' fontSize='15' fontWeight='700' textAnchor='middle' fontFamily='sans-serif'>MotorControl()</text>
+        <text x='515' y='364' fill='#9DB4CE' fontSize='12' textAnchor='middle' fontFamily='sans-serif'>2ms 电机分配</text>
+        <rect x='660' y='320' width='24' height='56' rx='6' fill='#4A90D9'/>
+        <text x='672' y='352' fill='#7E94AE' fontSize='11' textAnchor='middle' fontFamily='sans-serif'>电机</text>
+        <line x1='170' y1='68' x2='210' y2='68' stroke='#00D1FF' strokeWidth='2'/>
+        <line x1='295' y1='96' x2='105' y2='180' stroke='#4A90D9' strokeWidth='2'/>
+        <line x1='190' y1='208' x2='420' y2='208' stroke='#00D1FF' strokeWidth='2'/>
+        <line x1='515' y1='236' x2='515' y2='320' stroke='#00D1FF' strokeWidth='2'/>
+        <line x1='610' y1='348' x2='660' y2='348' stroke='#4A90D9' strokeWidth='2'/>
+        <path d='M105 236 C 60 300, 60 360, 295 320 C 360 300, 420 280, 420 236' stroke='#7E94AE' strokeWidth='1.5' fill='none' strokeDasharray='5 4'/>
+        <text x='40' y='320' fill='#7E94AE' fontSize='11' fontFamily='sans-serif'>Angle.measured 反馈</text>
+      </svg>
+    </Box>
+    <Box style={{ width: '34%', flexDirection: 'column', gap: 16 }}>
+      <Box style={{ background: '#0F1E33', borderLeft: '4px solid #00D1FF', padding: '14px 20px', borderRadius: 8 }}>
+        <Text style={{ fontSize: 17, color: '#E8F0FA', lineHeight: 1.5 }}>
+          <span style={{ color: '#00D1FF', fontWeight: 700 }}>反馈闭环</span>：GetAngle 解出的 Angle 喂给 PID 的 .measured，才算真正"感知自己姿态"。
+        </Text>
+      </Box>
+      <Text style={{ fontSize: 16, color: '#9DB4CE', lineHeight: 1.5 }}>
+        ⚠️ 已知 bug（P0）：偏航级联 <span style={{ color: '#4A90D9', fontFamily:'monospace' }}>pidRateZ.desired</span> 未赋值、<span style={{ color:'#4A90D9', fontFamily:'monospace' }}>pidYaw.out</span> 被丢弃 → 航向失控。
+      </Text>
+    </Box>
+  </Box>
+  <Box style={{ height: 60, padding: '0 64px', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>飞控+遥控 代码讲解（30min）</Text>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>08 / 22</Text>
+  </Box>
+</Slide>

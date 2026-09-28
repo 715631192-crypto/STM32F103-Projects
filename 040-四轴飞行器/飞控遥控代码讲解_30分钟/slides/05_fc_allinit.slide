@@ -1,0 +1,29 @@
+<Slide style={{ width: '1280px', height: '720px', background: '#0A1626' }}>
+  <Box style={{ height: 120, padding: '24px 64px', borderBottom: '1px solid #1E3A5F' }}>
+    <Text style={{ fontSize: 34, fontWeight: 500, color: '#E8F0FA' }}>第 1 章② · ALL_Init() 外设初始化</Text>
+    <Text style={{ fontSize: 16, color: '#9DB4CE', marginTop: 6 }}>文件：USER/INIT.c · 第 59 行 — 先开总线/接口，再初始化设备</Text>
+  </Box>
+  <Box style={{ height: 540, padding: '16px 64px', flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
+    {[['1','IIC_Init()','I2C 总线（MPU6050/磁力计）'],
+      ['2','pid_param_Init()','全部 PID 参数初值（INIT.c:110）'],
+      ['3','LEDInit()','LED 闪灯（含 SWJ_JTAGDisable 重映射：禁 JTAG 留 SWD）'],
+      ['4','MpuInit()','MPU6050 陀螺仪'],
+      ['5','ADC1_Init()','电压采样'],
+      ['6','ANO_Uart1_Init(19200)','USART1 接光流模块'],
+      ['7','UART2_Init(115200)','仅 FLY_TYPE==2 才开（预留视觉口，空置）'],
+      ['8','USART3_Config(500000)','USART3 接匿名上位机'],
+      ['9','NRF24L01_init()','2.4G 遥控通信（SPI）'],
+      ['10','spl0601_init()','气压计；失败有 break，置 SPL_Err，不死循环'],
+      ['11','TIM2/TIM3_PWM_Config()','4 路电机 PWM']].map((d,i)=>(
+      <Box key={i} style={{ flexDirection: 'row', alignItems: 'center', background: i%2? '#0F1E33':'transparent', padding: '8px 16px', borderRadius: 6 }}>
+        <Text style={{ fontSize: 15, color: '#00D1FF', fontWeight: 700, width: 40 }}>{d[0]}</Text>
+        <Text style={{ fontSize: 17, color: '#E8F0FA', fontFamily: 'monospace', fontWeight: 600, width: 320 }}>{d[1]}</Text>
+        <Text style={{ fontSize: 16, color: '#9DB4CE', flex: 1 }}>{d[2]}</Text>
+      </Box>
+    ))}
+  </Box>
+  <Box style={{ height: 60, padding: '0 64px', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>飞控+遥控 代码讲解（30min）</Text>
+    <Text style={{ fontSize: 14, color: '#7E94AE' }}>05 / 22</Text>
+  </Box>
+</Slide>
